@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+  --background: #06060a;
+  --foreground: #ffffff;
+  --muted: #a7a3b7;
+  --card: #11111a;
+  --card-soft: #181824;
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #7c3aed;
+  --accent-secondary: #a855f7;
+  --success: #22c55e;
+  --danger: #ef4444;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--background);
+    color: var(--foreground);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background:
+      radial-gradient(circle at 18% -10%, rgba(124, 58, 237, 0.34), transparent 28rem),
+      radial-gradient(circle at 90% 10%, rgba(168, 85, 247, 0.16), transparent 22rem),
+      #06060a;
+    color: var(--foreground);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: rgba(168, 85, 247, 0.45);
+  }
+}
+
+@layer components {
+  .glass {
+    border: 1px solid var(--border);
+    background: rgba(17, 17, 26, 0.78);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(20px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
