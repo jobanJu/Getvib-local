@@ -35,31 +35,31 @@ export function CreateEventForm() {
   }
 
   return (
-    <Card className="border-white/10 bg-black/20 backdrop-blur-sm">
+    <Card className="border-white/10 bg-slate-900 shadow-2xl">
       <form action={submit} className="grid gap-4 p-5">
-        <label className={fields}>Titre<Input name="title" required placeholder="Ex: Soirée Jazz & Vin" className="bg-white/5" /></label>
-        <label className={fields}>Description<Textarea name="description" required placeholder="Décrivez l'ambiance..." className="bg-white/5" /></label>
+        <label className={fields}>Titre<Input name="title" required placeholder="Ex: Soirée Jazz & Vin" /></label>
+        <label className={fields}>Description<Textarea name="description" required placeholder="Décrivez l'ambiance..." /></label>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className={fields}>Image (URL)<Input name="image" type="url" placeholder="https://images.unsplash.com/..." className="bg-white/5" /></label>
-          <label className={fields}>Vibe<Input name="vibe" required placeholder="Jazz, Gaming, Chill..." className="bg-white/5" /></label>
-          <label className={fields}>Date<Input name="date" type="date" required className="bg-white/5 text-white [color-scheme:dark]" /></label>
-          <label className={fields}>Heure<Input name="time" type="time" required className="bg-white/5 text-white [color-scheme:dark]" /></label>
-          <label className={fields}>Ville<Input name="city" required placeholder="Lille Centre" className="bg-white/5" /></label>
-          <label className={fields}>Adresse (Masquée au début)<Input name="address" required placeholder="12 rue de la Paix" className="bg-white/5" /></label>
-          <label className={fields}>Participants max<Input name="maxParticipants" type="number" min="2" max="30" defaultValue="10" required className="bg-white/5" /></label>
-          <label className={fields}>Âge minimum<Input name="minAge" type="number" min="18" defaultValue="18" required className="bg-white/5" /></label>
-          <label className={fields}>Âge maximum<Input name="maxAge" type="number" min="18" defaultValue="40" required className="bg-white/5" /></label>
+          <label className={fields}>Image (URL)<Input name="image" type="url" placeholder="https://images.unsplash.com/..." /></label>
+          <label className={fields}>Vibe<Input name="vibe" required placeholder="Jazz, Gaming, Chill..." /></label>
+          <label className={fields}>Date<Input name="date" type="date" required className="text-white [color-scheme:dark]" /></label>
+          <label className={fields}>Heure<Input name="time" type="time" required className="text-white [color-scheme:dark]" /></label>
+          <label className={fields}>Ville<Input name="city" required placeholder="Lille Centre" /></label>
+          <label className={fields}>Adresse (Masquée au début)<Input name="address" required placeholder="12 rue de la Paix" /></label>
+          <label className={fields}>Participants max<Input name="maxParticipants" type="number" min="2" max="30" defaultValue="10" required /></label>
+          <label className={fields}>Âge minimum<Input name="minAge" type="number" min="18" defaultValue="18" required /></label>
+          <label className={fields}>Âge maximum<Input name="maxAge" type="number" min="18" defaultValue="40" required /></label>
           <label className={fields}>
             Type de soirée
-            <select name="type" className="h-12 rounded-xl border border-border bg-white/5 px-4 text-sm text-white outline-none focus:border-accent" defaultValue="vib" required>
-              <option value="vib" className="bg-card text-white">Vib (Gratuit)</option>
-              <option value="vibplus" className="bg-card text-white">Vib+ (Payant)</option>
+            <select name="type" className="h-12 rounded-xl border border-white/20 bg-slate-950 px-4 text-sm text-white outline-none focus:border-accent" defaultValue="vib" required>
+              <option value="vib" className="bg-slate-900 text-white">Vib (Gratuit)</option>
+              <option value="vibplus" className="bg-slate-900 text-white">Vib+ (Payant)</option>
             </select>
           </label>
-          <label className={fields}>Montant participation (€)<Input name="contributionAmount" type="number" min="0" defaultValue="0" className="bg-white/5" /></label>
-          <label className={fields}>Raison (si payant)<Input name="contributionReason" placeholder="Ex: Pour les boissons et tapas" className="bg-white/5" /></label>
+          <label className={fields}>Montant participation (€)<Input name="contributionAmount" type="number" min="0" defaultValue="0" /></label>
+          <label className={fields}>Raison (si payant)<Input name="contributionReason" placeholder="Ex: Pour les boissons et tapas" /></label>
         </div>
-        <label className={fields}>Centres d&#39;intérêt recherchés (Séparés par des virgules)<Input name="interestsRequired" placeholder="Musique, Cuisine, Voyages" className="bg-white/5" /></label>
+        <label className={fields}>Centres d&#39;intérêt recherchés (Séparés par des virgules)<Input name="interestsRequired" placeholder="Musique, Cuisine, Voyages" /></label>
         <Button type="submit" className="mt-4 py-6 text-lg font-bold">Publier la soirée</Button>
         <p className={cn("min-h-5 text-center text-sm font-semibold", status.startsWith("Erreur") ? "text-danger" : "text-success")}>{status}</p>
       </form>
