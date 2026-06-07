@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { Camera, UserRound } from "lucide-react";
 
 type Props = {
   user: any;
@@ -17,15 +18,49 @@ export function ProfileForm({ user }: Props) {
   const [photoUrl, setPhotoUrl] = useState(user?.photo_url || "");
   const [name, setName] = useState(user?.name || "");
   const [bio, setBio] = useState(user?.bio || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const supabase = createClient();
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setMessage("Téléchargement de l'image...");
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload l'image dans le bucket 'images'
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Récupère l'URL publique
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      setPhotoUrl(publicUrl);
+      setMessage("Image chargée ! N'oubliez pas d'enregistrer.");
+    } catch (error: any) {
+      setMessage(`Erreur upload : ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage("Mise à jour...");
+    setMessage("Mise à jour du profil...");
 
-    if (!photoUrl || !photoUrl.startsWith("http")) {
+    if (!photoUrl) {
       setMessage("Erreur : La photo de profil est obligatoire.");
       setLoading(false);
       return;
@@ -42,7 +77,7 @@ export function ProfileForm({ user }: Props) {
         .eq("id", user.id);
 
       if (error) throw error;
-      setMessage("Profil mis à jour !");
+      setMessage("Profil mis à jour avec succès !");
       router.refresh();
     } catch (error: any) {
       setMessage(`Erreur : ${error.message}`);
@@ -52,51 +87,64 @@ export function ProfileForm({ user }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
-      <label className="grid gap-2 text-sm font-semibold">
-        Prénom
-        <Input 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
-          required 
-          placeholder="Votre prénom" 
-          className="bg-white/5"
-        />
-      </label>
-      
-      <label className="grid gap-2 text-sm font-semibold text-accent">
-        Photo de profil (URL) *
-        <Input 
-          value={photoUrl} 
-          onChange={(e) => setPhotoUrl(e.target.value)} 
-          required 
-          placeholder="https://images.unsplash.com/photo-..." 
-          className="bg-white/5 border-accent/50"
-        />
-        <span className="text-xs text-muted font-normal">Obligatoire pour participer aux vibes.</span>
-      </label>
-
-      {photoUrl && photoUrl.startsWith("http") && (
-        <div className="flex justify-center py-2">
-          <img src={photoUrl} alt="Preview" className="h-20 w-20 rounded-full object-cover border-2 border-accent" />
+    <form onSubmit={handleSubmit} className="grid gap-6">
+      <div className="flex flex-col items-center gap-4">
+        <div 
+          className="relative h-32 w-32 cursor-pointer group"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {photoUrl ? (
+            <img 
+              src={photoUrl} 
+              alt="Profil" 
+              className="h-full w-full rounded-full object-cover border-4 border-accent transition group-hover:opacity-70" 
+            />
+          ) : (
+            <div className="h-full w-full rounded-full bg-slate-800 flex items-center justify-center border-4 border-dashed border-white/20 group-hover:border-accent">
+              <UserRound className="h-12 w-12 text-white/20 group-hover:text-accent" />
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <Camera className="h-8 w-8 text-white" />
+          </div>
         </div>
-      )}
-
-      <label className="grid gap-2 text-sm font-semibold">
-        Bio
-        <textarea 
-          value={bio} 
-          onChange={(e) => setBio(e.target.value)} 
-          placeholder="Dites-nous en plus sur vous..." 
-          className="min-h-24 w-full rounded-xl border border-border bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-accent"
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleUpload} 
+          accept="image/*" 
+          className="hidden" 
         />
-      </label>
+        <p className="text-xs text-muted">Cliquez sur le cercle pour changer votre photo (Obligatoire)</p>
+      </div>
 
-      <Button type="submit" disabled={loading}>
-        {loading ? "Enregistrement..." : "Enregistrer les modifications"}
+      <div className="grid gap-4">
+        <label className="grid gap-2 text-sm font-semibold">
+          Prénom
+          <Input 
+            value={name} 
+            onChange={(e) => setName(e.target.value)} 
+            required 
+            placeholder="Votre prénom" 
+          />
+        </label>
+        
+        <label className="grid gap-2 text-sm font-semibold">
+          Bio
+          <textarea 
+            value={bio} 
+            onChange={(e) => setBio(e.target.value)} 
+            placeholder="Dites-nous en plus sur vous..." 
+            className="min-h-24 w-full rounded-xl border border-white/20 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-accent"
+          />
+        </label>
+      </div>
+
+      <Button type="submit" disabled={loading} className="py-6 text-lg font-bold">
+        {loading ? "Action en cours..." : "Enregistrer les modifications"}
       </Button>
 
-      <p className={`text-sm font-semibold text-center ${message.startsWith("Erreur") ? "text-danger" : "text-success"}`}>
+      <p className={`text-sm font-semibold text-center ${message.includes("Erreur") ? "text-danger" : "text-success"}`}>
         {message}
       </p>
     </form>
