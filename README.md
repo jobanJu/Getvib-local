@@ -67,9 +67,6 @@ L’adresse complète d’une soirée n’est jamais exposée publiquement. Avan
 
 La PWA expose `app/manifest.ts`, `public/sw.js`, des icônes maskable et l’enregistrement du service worker en production. FCM est initialisé via `useFcm` lorsque `NEXT_PUBLIC_FIREBASE_VAPID_KEY` est disponible.
 
-## Vérification
+## Déploiement
 
-```bash
-npm run typecheck
-npm run build
-```
+Le site est déployé sur Vercel. Les tâches automatiques (révélation d'adresses) sont gérées par GitHub Actions.
