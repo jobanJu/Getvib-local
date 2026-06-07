@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { SupportChat } from "@/components/layout/support-chat";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="fr" className={geist.variable}>
       <body className="font-sans antialiased">
         <AppShell>{children}</AppShell>
+        <SupportChat />
         <ServiceWorkerRegister />
       </body>
     </html>

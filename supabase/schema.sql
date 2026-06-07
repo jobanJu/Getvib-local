@@ -161,7 +161,7 @@ alter table public.notifications enable row level security;
 create policy "Les utilisateurs voient leurs notifications" on public.notifications for select using (auth.uid() = user_id);
 create policy "Les utilisateurs modifient leurs notifications" on public.notifications for update using (auth.uid() = user_id);
 
--- Reports
+-- Signalements (Reports)
 create table public.reports (
   id uuid default gen_random_uuid() primary key,
   reporter_id uuid references public.profiles(id) on delete cascade not null,
@@ -169,6 +169,22 @@ create table public.reports (
   reason text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Tickets de Support / Réclamations
+create table public.support_tickets (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  subject text not null,
+  message text not null,
+  email text not null,
+  status text default 'open',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.support_tickets enable row level security;
+create policy "Utilisateurs peuvent voir leurs tickets" on public.support_tickets for select using (auth.uid() = user_id);
+create policy "Utilisateurs peuvent créer des tickets" on public.support_tickets for insert with check (auth.uid() = user_id);
+
 
 alter table public.reports enable row level security;
 create policy "Utilisateurs peuvent voir leurs signalements" on public.reports for select using (auth.uid() = reporter_id);
