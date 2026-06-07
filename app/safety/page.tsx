@@ -4,17 +4,22 @@ import { Card } from "@/components/ui/card";
 const commandements = [
   { id: 1, title: "Mineurs interdits", text: "GetVib est strictement réservé aux personnes majeures (+18 ans)." },
   { id: 2, title: "Consentement photo", text: "Les photos et vidéos de la soirée sont interdites, sauf accord explicite de l'hôte." },
-  { id: 3, title: "Comportement exemplaire", text: "Tout comportement troublant ou déplacé entraîne une suspension immédiate." },
-  { id: 4, title: "Vibe partagée", text: "Respectez l'ambiance définie par l'hôte. On est là pour la même passion." },
-  { id: 5, title: "Confidentialité de l'adresse", text: "L'adresse révélée doit rester privée. Ne la partagez jamais en dehors de l'app." },
-  { id: 6, title: "Ponctualité", text: "Arrivez à l'heure indiquée pour ne pas perturber l'organisation de l'hôte." },
-  { id: 7, title: "Zéro drogue", text: "La consommation de substances illicites est strictement interdite en soirée." },
-  { id: 8, title: "Respect du voisinage", text: "Soyez discret en arrivant et en partant. On préserve la tranquillité du quartier." },
-  { id: 9, title: "Profil authentique", text: "Votre photo de profil doit être une vraie photo de vous. Pas d'avatars." },
-  { id: 10, title: "Communication via l'app", text: "Privilégiez le chat de GetVib pour votre sécurité jusqu'à la rencontre." },
-  { id: 11, title: "Contribution juste", text: "Pour les Vib+, réglez votre participation dès votre arrivée (ou selon les règles de l'hôte)." },
-  { id: 12, title: "Pas de démarchage", text: "GetVib est un lieu de rencontre, pas un lieu de prospection commerciale." },
-  { id: 13, title: "Esprit communautaire", text: "Signalez tout problème via le chat de support pour protéger les autres membres." },
+  { id: 3, title: "Comportement exemplaire", text: "Tout comportement troublant, harcèlement ou geste déplacé entraîne une suspension immédiate." },
+  { id: 4, title: "Vibe partagée", text: "Respectez l'ambiance définie par l'hôte (Jazz, Gaming, etc.). On vient pour partager une passion." },
+  { id: 5, title: "Confidentialité de l'adresse", text: "L'adresse révélée doit rester privée. Ne la partagez jamais, même à des amis." },
+  { id: 6, title: "Ponctualité", text: "Arrivez à l'heure indiquée. Un retard perturbe l'organisation de l'hôte et la vibe du groupe." },
+  { id: 7, title: "Zéro drogue", text: "La possession ou consommation de substances illicites est strictement interdite sous peine d'exclusion." },
+  { id: 8, title: "Respect du voisinage", text: "Soyez discret en arrivant et en partant. On préserve la tranquillité du quartier de l'hôte." },
+  { id: 9, title: "Profil authentique", text: "Votre photo de profil doit être une vraie photo de vous. La transparence est la base de la confiance." },
+  { id: 10, title: "Communication via l'app", text: "Privilégiez le chat GetVib pour votre sécurité. N'échangez vos numéros qu'une fois sur place." },
+  { id: 11, title: "Contribution juste", text: "Pour les Vib+, réglez votre participation dès votre arrivée. C'est un gage de respect pour l'hôte." },
+  { id: 12, title: "Pas de démarchage", text: "GetVib est un lieu de rencontre amicale, pas un lieu de prospection commerciale ou politique." },
+  { id: 13, title: "Esprit communautaire", text: "Signalez tout problème via le chat de support. Protéger GetVib, c'est protéger vos prochaines soirées." },
+  { id: 14, title: "Respect des lieux", text: "Traitez la maison de l'hôte avec soin. Laissez l'endroit aussi propre que vous l'avez trouvé." },
+  { id: 15, title: "Consommation responsable", text: "L'alcool doit rester un plaisir. L'ivresse manifeste n'est jamais acceptée en soirée." },
+  { id: 16, title: "Pas d'invités surprise", text: "Seuls les profils acceptés sur l'app sont autorisés. Ne venez jamais accompagné d'un inconnu." },
+  { id: 17, title: "Droit de l'hôte", text: "L'hôte est souverain chez lui. S'il vous demande de partir, vous devez le faire sans discussion." },
+  { id: 18, title: "Hygiène et tenue", text: "Venez avec une tenue propre et adaptée à la soirée. Le respect commence par l'image que l'on renvoie." },
 ];
 
 export default function SafetyPage() {
@@ -25,7 +30,7 @@ export default function SafetyPage() {
           <Star className="h-4 w-4 fill-accent" />
           Charte de Confiance
         </div>
-        <h1 className="text-5xl font-black tracking-tight italic uppercase text-white">Les 13 Commandements</h1>
+        <h1 className="text-5xl font-black tracking-tight italic uppercase text-white">Les 18 Commandements</h1>
         <p className="max-w-2xl mx-auto text-muted text-lg">
           Pour que chaque soirée reste un moment magique, sécurisé et respectueux. Voici les règles d'or de la communauté GetVib.
         </p>
