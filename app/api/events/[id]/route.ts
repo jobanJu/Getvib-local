@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { getEventForViewer } from "@/features/events/server";
-import { getAdminAuth } from "@/lib/firebase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: Params) {
-  const token = request.headers.get("authorization")?.replace("Bearer ", "");
-  const viewer = token ? await getAdminAuth().verifyIdToken(token).catch(() => null) : null;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const viewer = user;
+  
   const { id } = await params;
-  const event = await getEventForViewer(id, viewer?.uid);
+  const event = await getEventForViewer(id, viewer?.id);
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });

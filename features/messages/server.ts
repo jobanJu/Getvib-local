@@ -1,54 +1,112 @@
-import { Timestamp } from "firebase-admin/firestore";
-import { getAdminDb, getAdminRealtimeDb } from "@/lib/firebase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { parseString } from "@/lib/validation";
 
 export async function listMessages(chatId: string, userId: string) {
   await assertChatMember(chatId, userId);
-  const snapshot = await getAdminDb()
-    .collection("messages")
-    .where("chatId", "==", chatId)
-    .orderBy("createdAt", "asc")
-    .limit(100)
-    .get();
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("chat_id", chatId)
+    .order("created_at", { ascending: true })
+    .limit(100);
 
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  if (error) throw error;
+  
+  return data.map(row => ({
+    id: row.id,
+    chatId: row.chat_id,
+    senderId: row.sender_id,
+    text: row.text,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function getUserChats(userId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("chats")
+    .select("*, chat_participants!inner(user_id)")
+    .eq("chat_participants.user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(20);
+
+  if (error || !data) return [];
+
+  // Need to fetch other participants to map to the `participantIds` array
+  const chatIds = data.map(c => c.id);
+  const { data: allParticipants } = await supabase
+    .from("chat_participants")
+    .select("chat_id, user_id")
+    .in("chat_id", chatIds);
+
+  return data.map(chat => {
+    const participants = allParticipants?.filter(p => p.chat_id === chat.id).map(p => p.user_id) || [];
+    return {
+      id: chat.id,
+      eventId: chat.event_id,
+      type: chat.type,
+      participantIds: participants,
+      createdAt: chat.created_at,
+      updatedAt: chat.updated_at,
+    };
+  });
 }
 
 export async function sendMessage(chatId: string, senderId: string, rawText: unknown) {
   const text = parseString(rawText, "Message", 1200);
   const chat = await assertChatMember(chatId, senderId);
-  const messageRef = getAdminDb().collection("messages").doc();
-  const payload = { chatId, senderId, text, createdAt: Timestamp.now() };
+  const supabase = createAdminClient();
+  
+  const { data: message, error } = await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: senderId,
+      text,
+    })
+    .select()
+    .single();
 
-  await messageRef.set(payload);
-  await getAdminDb().collection("chats").doc(chatId).update({ updatedAt: Timestamp.now() });
-  await getAdminRealtimeDb().ref(`chats/${chatId}/messages/${messageRef.id}`).set({
-    ...payload,
-    createdAt: Date.now(),
-  });
+  if (error) throw error;
 
-  const recipients = (chat.participantIds as string[]).filter((uid) => uid !== senderId);
+  // updatedAt is handled by the Postgres trigger `on_message_inserted`
+
+  const recipients = chat.participantIds.filter((uid) => uid !== senderId);
   await Promise.all(
-    recipients.map((userId) =>
-      getAdminDb().collection("notifications").add({
-        userId,
+    recipients.map((uid) =>
+      supabase.from("notifications").insert({
+        user_id: uid,
         type: "new_message",
         title: "Nouveau message",
-        read: false,
-        createdAt: Timestamp.now(),
-      }),
-    ),
+      })
+    )
   );
 
-  return { id: messageRef.id, ...payload };
+  return {
+    id: message.id,
+    chatId: message.chat_id,
+    senderId: message.sender_id,
+    text: message.text,
+    createdAt: message.created_at,
+  };
 }
 
 async function assertChatMember(chatId: string, userId: string) {
-  const chatDoc = await getAdminDb().collection("chats").doc(chatId).get();
-  if (!chatDoc.exists) throw new Error("Chat not found.");
-  const chat = chatDoc.data() || {};
-  if (!Array.isArray(chat.participantIds) || !chat.participantIds.includes(userId)) {
+  const supabase = createAdminClient();
+  const { data: participants, error } = await supabase
+    .from("chat_participants")
+    .select("user_id")
+    .eq("chat_id", chatId);
+
+  if (error || !participants || participants.length === 0) {
+    throw new Error("Chat not found or access forbidden.");
+  }
+
+  const pIds = participants.map(p => p.user_id);
+  if (!pIds.includes(userId)) {
     throw new Error("Forbidden.");
   }
-  return chat;
+
+  return { participantIds: pIds };
 }

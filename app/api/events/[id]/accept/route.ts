@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { decideApplication } from "@/features/events/server";
-import { requireUser } from "@/lib/firebase/auth";
+import { requireUser } from "@/lib/auth";
 import { assertEventHost } from "@/features/events/security";
 
 type Params = { params: Promise<{ id: string }> };
@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: Params) {
 
   try {
     const { id } = await params;
-    await assertEventHost(id, user.uid);
+    await assertEventHost(id, user.id);
     const body = await request.json();
     const result = await decideApplication(id, String(body.userId), "accepted");
     return NextResponse.json(result);

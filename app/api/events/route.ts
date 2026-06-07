@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/firebase/auth";
+import { requireUser } from "@/lib/auth";
 import { parseCreateEventInput } from "@/lib/validation";
 import { createEvent, listPublishedEvents } from "@/features/events/server";
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
   try {
     const input = parseCreateEventInput(await request.json());
-    const event = await createEvent(user.uid, input);
+    const event = await createEvent(user.id, input);
     return NextResponse.json({ event }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: errorMessage(error) }, { status: 400 });

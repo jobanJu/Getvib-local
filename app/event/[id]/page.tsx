@@ -2,16 +2,19 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CalendarDays, LockKeyhole, MapPin, ShieldCheck, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { demoEvents } from "@/lib/demo-data";
+import { getEventForViewer } from "@/features/events/server";
+import { formatEventDate } from "@/lib/date";
+import { ApplicationForm } from "@/features/events/application-form";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function EventDetailPage({ params }: Props) {
   const { id } = await params;
-  const event = demoEvents.find((item) => item.id === id);
+  const event = await getEventForViewer(id);
+  
   if (!event) notFound();
 
   return (
@@ -41,10 +44,17 @@ export default async function EventDetailPage({ params }: Props) {
               <MapPin className="h-5 w-5 text-accent-secondary" />
               Zone publique: {event.city}
             </span>
-            <span className="flex items-center gap-3">
-              <LockKeyhole className="h-5 w-5 text-accent-secondary" />
-              Adresse révélée 2h avant l&#39;événement aux invités validés.
-            </span>
+            {event.addressVisible ? (
+              <span className="flex items-center gap-3 text-white font-medium">
+                <MapPin className="h-5 w-5 text-emerald-400" />
+                {event.address}
+              </span>
+            ) : (
+              <span className="flex items-center gap-3">
+                <LockKeyhole className="h-5 w-5 text-accent-secondary" />
+                {event.addressHint}
+              </span>
+            )}
             <span className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-accent-secondary" />
               Hôte vérifié niveau 1 minimum recommandé.
@@ -58,11 +68,11 @@ export default async function EventDetailPage({ params }: Props) {
           <div className="grid gap-3 text-sm text-muted">
             <span className="flex items-center gap-3">
               <CalendarDays className="h-5 w-5 text-accent-secondary" />
-              {event.dateLabel}
+              {formatEventDate(event.date)}
             </span>
             <span className="flex items-center gap-3">
               <Users className="h-5 w-5 text-accent-secondary" />
-              {event.participants}/{event.maxParticipants} invités
+              {event.participants.length}/{event.maxParticipants} invités
             </span>
             <span className="flex items-center gap-3">
               <MapPin className="h-5 w-5 text-accent-secondary" />
@@ -76,12 +86,8 @@ export default async function EventDetailPage({ params }: Props) {
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-xl font-semibold">Candidature</h2>
-          <label className="mt-4 grid gap-2 text-sm font-semibold">
-            Pourquoi souhaitez-vous rejoindre cette soirée ?
-            <Textarea placeholder="Expliquez votre vibe, simplement." />
-          </label>
-          <Button className="mt-4 w-full">Envoyer ma candidature</Button>
+          <h2 className="text-xl font-semibold mb-4">Rejoindre la soirée</h2>
+          <ApplicationForm eventId={id} />
         </Card>
       </aside>
     </section>

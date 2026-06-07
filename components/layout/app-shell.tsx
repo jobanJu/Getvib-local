@@ -14,7 +14,7 @@ const primaryNav = [
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
   const isLanding = pathname === "/";
 
   return (

@@ -1,5 +1,3 @@
-import type { Timestamp } from "firebase-admin/firestore";
-
 export type EventType = "vib" | "vibplus";
 export type ApplicationStatus = "pending" | "accepted" | "rejected";
 export type VerificationLevel = 0 | 1 | 2;
@@ -12,18 +10,16 @@ export type NotificationType =
   | "address_revealed"
   | "event_reminder";
 
-export type FireTimestamp = Timestamp | Date;
-
-export type UserProfile = {
-  uid: string;
+export type Profile = {
+  id: string;
   name: string;
   email: string;
-  photoURL: string;
+  photo_url: string;
   age: number;
   bio: string;
   interests: string[];
-  verificationLevel: VerificationLevel;
-  createdAt: FireTimestamp;
+  verification_level: VerificationLevel;
+  created_at: string;
 };
 
 export type VibeEvent = {
@@ -34,11 +30,11 @@ export type VibeEvent = {
   description: string;
   image: string;
   vibe: string;
-  date: FireTimestamp;
+  date: string;
   city: string;
   address: string;
   addressVisible: boolean;
-  revealAt: FireTimestamp;
+  revealAt: string;
   maxParticipants: number;
   participants: string[];
   contributionAmount: number;
@@ -47,7 +43,7 @@ export type VibeEvent = {
   maxAge: number;
   interestsRequired: string[];
   status: EventStatus;
-  createdAt: FireTimestamp;
+  createdAt: string;
 };
 
 export type EventApplication = {
@@ -56,7 +52,7 @@ export type EventApplication = {
   userId: string;
   message: string;
   status: ApplicationStatus;
-  createdAt: FireTimestamp;
+  createdAt: string;
 };
 
 export type ChatKind = "private" | "group";
@@ -65,9 +61,8 @@ export type Chat = {
   id: string;
   eventId: string;
   type: ChatKind;
-  participantIds: string[];
-  createdAt: FireTimestamp;
-  updatedAt: FireTimestamp;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ChatMessage = {
@@ -75,7 +70,7 @@ export type ChatMessage = {
   chatId: string;
   senderId: string;
   text: string;
-  createdAt: FireTimestamp;
+  createdAt: string;
 };
 
 export type AppNotification = {
@@ -84,7 +79,7 @@ export type AppNotification = {
   type: NotificationType;
   title: string;
   read: boolean;
-  createdAt: FireTimestamp;
+  createdAt: string;
 };
 
 export type Report = {
@@ -92,7 +87,7 @@ export type Report = {
   reporterId: string;
   targetUserId: string;
   reason: string;
-  createdAt: FireTimestamp;
+  createdAt: string;
 };
 
 export type CreateEventInput = {

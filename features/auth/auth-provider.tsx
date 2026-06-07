@@ -1,11 +1,12 @@
 "use client";
 
-import { onAuthStateChanged, type User } from "firebase/auth";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { auth } from "@/lib/firebase/client";
+import type { User, Session } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 
 type AuthContextValue = {
   user: User | null;
+  session: Session | null;
   loading: boolean;
   getIdToken: () => Promise<string | null>;
 };
@@ -14,22 +15,36 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (nextUser) => {
-      setUser(nextUser);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      session,
       loading,
-      getIdToken: () => user?.getIdToken() ?? Promise.resolve(null),
+      getIdToken: () => Promise.resolve(session?.access_token ?? null),
     }),
-    [loading, user],
+    [loading, user, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
