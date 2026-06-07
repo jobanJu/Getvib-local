@@ -1,0 +1,15 @@
+name: Reveal Addresses Cron
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Toutes les 15 minutes
+  workflow_dispatch: # Permet de lancer manuellement pour tester
+
+jobs:
+  reveal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Reveal Addresses API
+        run: |
+          curl -X GET "https://getvib.fr/api/cron/reveal-addresses" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
