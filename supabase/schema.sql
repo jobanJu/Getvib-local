@@ -13,6 +13,7 @@ create table public.profiles (
   bio text,
   interests text[],
   verification_level integer default 0,
+  accepted_terms boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
