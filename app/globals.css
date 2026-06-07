@@ -16,6 +16,11 @@
   --danger: #ef4444;
   }
 
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
   * {
     box-sizing: border-box;
   }
