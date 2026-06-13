@@ -23,7 +23,7 @@ export function EventCard({ event }: { event: EventCardData }) {
   return (
     <Card className="overflow-hidden">
       <div className="relative aspect-[16/11]">
-        <Image src={event.image} alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 420px" />
+        <Image src={event.image} alt="" fill unoptimized className="object-cover" sizes="(max-width: 768px) 100vw, 420px" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/10 to-transparent" />
         <div className="absolute left-4 top-4 flex gap-2">
           <Badge tone={event.type === "vibplus" ? "purple" : "green"}>{event.type === "vibplus" ? "Vib+" : "Vib"}</Badge>

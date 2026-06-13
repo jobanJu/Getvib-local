@@ -19,7 +19,9 @@ create table public.profiles (
 
 -- Active RLS
 alter table public.profiles enable row level security;
-create policy "Profils visibles par tous" on public.profiles for select using (true);
+-- Seul le propriétaire lit sa ligne (protège email, âge, bio…). Les champs
+-- publics éventuels (nom, photo) doivent être servis via l'API service role.
+create policy "Profil visible par son propriétaire" on public.profiles for select using (auth.uid() = id);
 create policy "Mise à jour par l'utilisateur lui-même" on public.profiles for update using (auth.uid() = id);
 
 -- Type d'événements
@@ -54,6 +56,16 @@ alter table public.events enable row level security;
 create policy "Événements publiés visibles par tous" on public.events for select using (status = 'published');
 create policy "Hôtes peuvent gérer leurs événements" on public.events for all using (auth.uid() = host_id);
 
+-- L'adresse n'est jamais exposée à la clé anon : on retire la colonne `address`
+-- de l'accès public. L'adresse n'est servie qu'au travers de l'API serveur
+-- (service role) après acceptation et révélation.
+revoke select on public.events from anon, authenticated;
+grant select (
+  id, host_id, type, title, description, image, vibe, date, city,
+  address_visible, reveal_at, max_participants, contribution_amount,
+  contribution_reason, min_age, max_age, interests_required, status, created_at
+) on public.events to anon, authenticated;
+
 -- Participants aux événements (Junction table)
 create table public.event_participants (
   event_id uuid references public.events(id) on delete cascade not null,
@@ -63,7 +75,11 @@ create table public.event_participants (
 );
 
 alter table public.event_participants enable row level security;
-create policy "Participants visibles par tous" on public.event_participants for select using (true);
+-- Visibles uniquement par le participant lui-même ou l'hôte de l'événement.
+create policy "Participants visibles par hôte et participant" on public.event_participants for select using (
+  auth.uid() = user_id
+  or auth.uid() in (select host_id from public.events where id = event_id)
+);
 
 -- Candidatures (Applications)
 create type application_status as enum ('pending', 'accepted', 'rejected');

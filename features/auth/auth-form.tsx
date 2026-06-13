@@ -36,7 +36,7 @@ export function AuthForm({ mode }: Props) {
     try {
       if (mode === "signup") {
         const name = String(formData.get("name") || "");
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -46,6 +46,12 @@ export function AuthForm({ mode }: Props) {
           }
         });
         if (error) throw error;
+        // Si la confirmation d'email est activée, aucune session n'est créée :
+        // l'utilisateur doit confirmer son adresse avant de pouvoir se connecter.
+        if (!data.session) {
+          setMessage("Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.");
+          return;
+        }
         setMessage("Compte créé avec succès. Vous êtes connecté.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({

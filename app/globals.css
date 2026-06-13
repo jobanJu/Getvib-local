@@ -10,8 +10,8 @@
   --card: #11111a;
   --card-soft: #181824;
   --border: rgba(255, 255, 255, 0.1);
-  --accent: #7c3aed;
-  --accent-secondary: #a855f7;
+  --accent: #f6339a;
+  --accent-secondary: #c44bff;
   --success: #22c55e;
   --danger: #ef4444;
   }
@@ -36,8 +36,8 @@
     min-height: 100vh;
     margin: 0;
     background:
-      radial-gradient(circle at 18% -10%, rgba(124, 58, 237, 0.34), transparent 28rem),
-      radial-gradient(circle at 90% 10%, rgba(168, 85, 247, 0.16), transparent 22rem),
+      radial-gradient(circle at 18% -10%, rgba(246, 51, 154, 0.30), transparent 28rem),
+      radial-gradient(circle at 90% 10%, rgba(196, 75, 255, 0.16), transparent 22rem),
       #06060a;
     color: var(--foreground);
   }
@@ -59,7 +59,7 @@
   }
 
   ::selection {
-    background: rgba(168, 85, 247, 0.45);
+    background: rgba(246, 51, 154, 0.45);
   }
 }
 

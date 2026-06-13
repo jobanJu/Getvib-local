@@ -226,6 +226,39 @@ export async function revealDueAddresses() {
   return { revealed: events.length };
 }
 
+export async function deleteEvent(eventId: string, userId: string) {
+  const supabase = createAdminClient();
+
+  const { data: event, error: evtErr } = await supabase
+    .from("events")
+    .select("host_id")
+    .eq("id", eventId)
+    .single();
+
+  if (evtErr || !event) throw new Error("Event not found.");
+  if (event.host_id !== userId) throw new Error("Forbidden: You are not the host.");
+
+  // Les applications, participants, chats et messages liés sont supprimés
+  // automatiquement via les contraintes FK `on delete cascade`.
+  const { error } = await supabase.from("events").delete().eq("id", eventId);
+  if (error) throw error;
+
+  return { ok: true };
+}
+
+export async function listEventsByHost(hostId: string): Promise<VibeEvent[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*, event_participants(user_id)")
+    .eq("host_id", hostId)
+    .order("date", { ascending: true });
+
+  if (error || !data) return [];
+
+  return data.map(mapEventRow);
+}
+
 async function ensureGroupChat(eventId: string, hostId: string) {
   const supabase = createAdminClient();
   
@@ -266,5 +299,5 @@ async function createNotification(userId: string, type: string, title: string) {
 
 function defaultImageFor(vibe: string) {
   const query = encodeURIComponent(`${vibe} private dinner people evening`);
-  return `https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=1400&q=80&getvib=${query}`;
+  return `https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&q=70&getvib=${query}`;
 }

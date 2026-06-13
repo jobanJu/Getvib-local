@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { SupportChat } from "@/components/layout/support-chat";
 import { TermsBlocker } from "@/components/layout/terms-blocker";
+import { AuthProvider } from "@/features/auth/auth-provider";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -42,10 +43,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="fr" className={geist.variable}>
       <body className="font-sans antialiased">
-        <AppShell>{children}</AppShell>
-        <SupportChat />
-        <TermsBlocker />
-        <ServiceWorkerRegister />
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+          <SupportChat />
+          <TermsBlocker />
+          <ServiceWorkerRegister />
+        </AuthProvider>
       </body>
     </html>
   );

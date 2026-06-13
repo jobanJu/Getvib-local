@@ -10,10 +10,10 @@ GetVib est une plateforme de rencontres IRL basée sur des soirées privées che
 - Tailwind CSS v4
 - shadcn/ui style components
 - Lucide Icons
-- Firebase Auth, Firestore, Realtime Database, Storage, Cloud Messaging
-- Route Handlers API et services serveur
+- Supabase (Auth, Postgres, Realtime, Storage) avec RLS
+- Route Handlers API et services serveur (service role)
 - PWA installable iPhone, Android et desktop
-- Vercel + cron de révélation d’adresse
+- Vercel + cron GitHub Actions de révélation d’adresse
 
 ## Arborescence
 
@@ -22,12 +22,11 @@ app/                      Pages, API routes, manifest PWA
 components/               UI, layout, cartes événement
 features/                 Auth, events, messages, notifications, reports
 hooks/                    Hooks client
-lib/                      Types, Firebase, validation, helpers
+lib/                      Types, client Supabase, validation, helpers
 public/                   Service worker et icônes PWA
-firestore.rules           Règles Firestore
-storage.rules             Règles Storage
-database.rules.json       Règles Realtime Database
-vercel.json               Cron révélation adresses
+supabase/schema.sql       Schéma Postgres + policies RLS
+supabase/migrations/      Migrations SQL incrémentales
+.github/workflows/        Cron GitHub Actions (révélation d'adresses)
 ```
 
 ## Installation
@@ -38,7 +37,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Renseigner les variables Firebase client et Admin dans `.env.local`.
+Renseigner les variables Supabase (client et service role) dans `.env.local` — voir `.env.example`.
+
+Appliquer le schéma sur la base : exécuter `supabase/schema.sql` puis les fichiers de `supabase/migrations/` dans le SQL Editor de Supabase.
 
 ## Routes API
 
@@ -55,17 +56,17 @@ Renseigner les variables Firebase client et Admin dans `.env.local`.
 - `POST /api/reports`
 - `GET /api/cron/reveal-addresses`
 
-Les mutations protégées attendent `Authorization: Bearer <firebase_id_token>`.
+Les mutations protégées attendent un cookie de session Supabase (ou `Authorization: Bearer <supabase_access_token>`).
 
 ## Modèle de données
 
-Collections Firestore: `users`, `events`, `applications`, `chats`, `messages`, `notifications`, `reports`.
+Tables Postgres (Supabase): `profiles`, `events`, `event_participants`, `applications`, `chats`, `chat_participants`, `messages`, `notifications`, `reports`, `support_tickets`.
 
-L’adresse complète d’une soirée n’est jamais exposée publiquement. Avant validation, seule la zone est affichée. Après acceptation, l’utilisateur voit le statut de révélation. Le cron Vercel appelle `/api/cron/reveal-addresses` toutes les 15 minutes et révèle les adresses dont `revealAt <= now`.
+L’adresse complète d’une soirée n’est jamais exposée publiquement. La colonne `events.address` est retirée de l’accès `anon`/`authenticated` au niveau RLS : elle n’est servie qu’au travers de l’API serveur (service role), après acceptation et révélation. Le cron GitHub Actions appelle `/api/cron/reveal-addresses` toutes les 15 minutes et révèle les adresses dont `reveal_at <= now`.
 
 ## PWA
 
-La PWA expose `app/manifest.ts`, `public/sw.js`, des icônes maskable et l’enregistrement du service worker en production. FCM est initialisé via `useFcm` lorsque `NEXT_PUBLIC_FIREBASE_VAPID_KEY` est disponible.
+La PWA expose `app/manifest.ts`, `public/sw.js`, des icônes maskable et l’enregistrement du service worker en production. Les notifications temps réel des messages s’appuient sur Supabase Realtime.
 
 ## Déploiement
 

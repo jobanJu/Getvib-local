@@ -21,7 +21,7 @@ export default async function EventDetailPage({ params }: Props) {
     <section className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.7fr] lg:px-8">
       <div className="grid gap-5">
         <div className="relative aspect-[16/10] overflow-hidden rounded-3xl border border-border">
-          <Image src={event.image} alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 680px" />
+          <Image src={event.image} alt="" fill unoptimized className="object-cover" sizes="(max-width: 1024px) 100vw, 680px" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
           <div className="absolute bottom-5 left-5 right-5">
             <div className="mb-3 flex gap-2">
