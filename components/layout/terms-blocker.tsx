@@ -31,22 +31,34 @@ const commandements = [
 export function TermsBlocker() {
   const { user, profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const supabase = createClient();
 
-  if (!user || profile?.accepted_terms) return null;
+  if (!user || profile?.accepted_terms || accepted) return null;
 
   async function handleAccept() {
     setLoading(true);
+    setErrorMsg("");
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .update({ accepted_terms: true })
-        .eq("id", user?.id);
+        .eq("id", user?.id)
+        .select("id, accepted_terms");
 
       if (error) throw error;
+      // Une mise à jour qui ne touche aucune ligne (profil absent ou bloqué par
+      // RLS) ne lève pas d'erreur : on le détecte explicitement.
+      if (!data || data.length === 0) {
+        throw new Error("Profil introuvable. Déconnecte-toi puis reconnecte-toi avant de réessayer.");
+      }
+      // On débloque tout de suite, sans dépendre du rechargement du contexte.
+      setAccepted(true);
       await refreshProfile();
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      console.error("Acceptation de la charte échouée:", error);
+      setErrorMsg(error instanceof Error ? error.message : "Une erreur est survenue. Réessaie.");
     } finally {
       setLoading(false);
     }
@@ -82,6 +94,9 @@ export function TermsBlocker() {
             <Button onClick={handleAccept} disabled={loading} size="lg" className="w-full sm:w-auto px-12 py-7 text-lg font-black uppercase italic">
               {loading ? "Validation..." : "J'ai lu et j'accepte le règlement"}
             </Button>
+            {errorMsg && (
+              <p className="text-sm font-semibold text-danger text-center">{errorMsg}</p>
+            )}
           </div>
         </section>
       </div>
