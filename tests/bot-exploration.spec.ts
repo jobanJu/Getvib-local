@@ -16,7 +16,7 @@ test.describe('Bot Explorateur GetVib', () => {
     console.log('✅ Titre principal visible');
 
     // 4. Test du bouton de navigation vers "Découvrir"
-    const discoverLink = page.locator('nav >> text=Découvrir');
+    const discoverLink = page.locator('text=Découvrir les vibes');
     if (await discoverLink.isVisible()) {
         await discoverLink.click();
         await expect(page).toHaveURL(/.*discover/);

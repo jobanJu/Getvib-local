@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const friends = await listFriends(user.id);
     return NextResponse.json({ friends });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 }

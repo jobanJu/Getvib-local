@@ -9,7 +9,7 @@ type Props = {
   city?: string;
 };
 
-export function DiscoverClient({ events, city = "Lille" }: Props) {
+export function DiscoverClient({ events, city = "votre ville" }: Props) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {

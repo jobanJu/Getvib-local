@@ -26,10 +26,10 @@ export default function LandingPage() {
         <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl content-center px-4 pb-24 pt-16 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <p className="mb-5 inline-flex rounded-full border border-foreground/10 bg-foreground/8 px-3 py-1 text-sm font-semibold text-pink-100">
-              Lancement MVP à Lille
+              Lancement MVP Europe
             </p>
             <h1 className="text-5xl font-black leading-[0.96] tracking-tight sm:text-7xl">
-              La soirée parfaite commence par la bonne vibe.
+              La soirée parfaite commence par la <span className="italic text-accent">bonne vibe.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
               Rencontrez des personnes qui partagent réellement vos passions autour de soirées privées sélectionnées.
@@ -73,8 +73,9 @@ export default function LandingPage() {
             <h2 className="mt-2 text-3xl font-bold sm:text-4xl">Des cercles petits, intentionnels et chaleureux.</h2>
           </div>
           <Button asChild variant="secondary">
-            <Link href="/discover">Explorer Lille</Link>
+           <Link href="/discover">Explorer les vibes</Link>
           </Button>
+
         </div>
         <div className="flex flex-wrap gap-3">
           {vibes.map((vibe) => (
@@ -102,7 +103,7 @@ export default function LandingPage() {
           <div className="rounded-2xl border border-foreground/10 bg-foreground/8 p-5">
             <UsersRound className="h-8 w-8 text-accent-secondary" />
             <p className="mt-4 text-4xl font-black">10</p>
-            <p className="mt-2 text-muted">premiers utilisateurs réels à Lille pour valider le MVP.</p>
+            <p className="mt-2 text-muted">premiers utilisateurs réels pour valider le MVP.</p>
           </div>
         </Card>
       </section>
