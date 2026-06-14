@@ -6,6 +6,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { SupportChat } from "@/components/layout/support-chat";
 import { TermsBlocker } from "@/components/layout/terms-blocker";
 import { AuthProvider } from "@/features/auth/auth-provider";
+import { ThemeProvider } from "@/features/auth/theme-provider";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -41,14 +42,37 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={geist.variable}>
+    <html lang="fr" className={geist.variable} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const hour = new Date().getHours();
+                  const isDay = hour >= 8 && hour < 18;
+                  const initialTheme = isDay ? "light" : "dark";
+                  const theme = localStorage.getItem("theme") || initialTheme;
+                  if (theme === "dark") {
+                    document.documentElement.classList.add("dark");
+                  } else {
+                    document.documentElement.classList.remove("dark");
+                  }
+                } catch (e) {}
+              })()
+            `,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
-        <AuthProvider>
-          <AppShell>{children}</AppShell>
-          <SupportChat />
-          <TermsBlocker />
-          <ServiceWorkerRegister />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+            <SupportChat />
+            <TermsBlocker />
+            <ServiceWorkerRegister />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

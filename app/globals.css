@@ -4,21 +4,38 @@
 
 @layer base {
   :root {
-  --background: #06060a;
-  --foreground: #ffffff;
-  --muted: #a7a3b7;
-  --card: #11111a;
-  --card-soft: #181824;
-  --border: rgba(255, 255, 255, 0.1);
-  --accent: #f6339a;
-  --accent-secondary: #c44bff;
-  --success: #22c55e;
-  --danger: #ef4444;
+    /* Mode clair — défaut entre 8h et 18h */
+    --background: 247 247 250;
+    --foreground: 17 17 26;
+    --muted: 90 88 105;
+    --card: 255 255 255;
+    --card-soft: 240 240 245;
+    --border: rgba(17, 17, 26, 0.12);
+    --accent: 246 51 154;
+    --accent-secondary: 168 51 230;
+    --success: 22 163 74;
+    --danger: 220 38 38;
+    color-scheme: light;
+  }
+
+  .dark {
+    /* Mode sombre — défaut entre 18h et 8h */
+    --background: 6 6 10;
+    --foreground: 255 255 255;
+    --muted: 167 163 183;
+    --card: 17 17 26;
+    --card-soft: 24 24 36;
+    --border: rgba(255, 255, 255, 0.1);
+    --accent: 246 51 154;
+    --accent-secondary: 196 75 255;
+    --success: 34 197 94;
+    --danger: 239 68 68;
+    color-scheme: dark;
   }
 
   input::placeholder,
   textarea::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgb(var(--muted) / 0.7);
   }
 
   * {
@@ -26,8 +43,8 @@
   }
 
   html {
-    background: var(--background);
-    color: var(--foreground);
+    background: rgb(var(--background));
+    color: rgb(var(--foreground));
     scroll-behavior: smooth;
   }
 
@@ -35,11 +52,18 @@
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
+    color: rgb(var(--foreground));
+    background:
+      radial-gradient(circle at 18% -10%, rgba(246, 51, 154, 0.10), transparent 28rem),
+      radial-gradient(circle at 90% 10%, rgba(168, 51, 230, 0.07), transparent 22rem),
+      rgb(var(--background));
+  }
+
+  .dark body {
     background:
       radial-gradient(circle at 18% -10%, rgba(246, 51, 154, 0.30), transparent 28rem),
       radial-gradient(circle at 90% 10%, rgba(196, 75, 255, 0.16), transparent 22rem),
-      #06060a;
-    color: var(--foreground);
+      rgb(var(--background));
   }
 
   a {
@@ -59,16 +83,22 @@
   }
 
   ::selection {
-    background: rgba(246, 51, 154, 0.45);
+    background: rgba(246, 51, 154, 0.4);
+    color: #fff;
   }
 }
 
 @layer components {
   .glass {
     border: 1px solid var(--border);
-    background: rgba(17, 17, 26, 0.78);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+    background: rgb(var(--card) / 0.85);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.10);
     backdrop-filter: blur(20px);
+  }
+
+  .dark .glass {
+    background: rgb(var(--card) / 0.78);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
   }
 
   .safe-bottom {

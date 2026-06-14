@@ -5,7 +5,8 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { Camera, UserRound } from "lucide-react";
+import { Camera, UserRound, Loader2, Sparkles } from "lucide-react";
+import { AVAILABLE_CITIES, CITIES_BY_REGION } from "@/lib/constants";
 
 type Props = {
   user: any;
@@ -18,9 +19,17 @@ export function ProfileForm({ user }: Props) {
   const [photoUrl, setPhotoUrl] = useState(user?.photo_url || "");
   const [name, setName] = useState(user?.name || "");
   const [bio, setBio] = useState(user?.bio || "");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [age, setAge] = useState(user?.age || "");
+  const [selectedRegion, setSelectedRegion] = useState<string>(user?.region || "France");
+  const [city, setCity] = useState(user?.city || "");
+  const [interests, setInterests] = useState(user?.interests?.join(", ") || "");
+  const [password, setPassword] = useState("");
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+
+  const citiesInRegion = CITIES_BY_REGION[selectedRegion as keyof typeof CITIES_BY_REGION] || [];
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -34,16 +43,14 @@ export function ProfileForm({ user }: Props) {
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // Upload l'image dans le bucket 'images'
       const { error: uploadError } = await supabase.storage
-        .from('images')
+        .from('profiles') // On utilise le bucket 'profiles' comme à l'inscription
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Récupère l'URL publique
       const { data: { publicUrl } } = supabase.storage
-        .from('images')
+        .from('profiles')
         .getPublicUrl(filePath);
 
       setPhotoUrl(publicUrl);
@@ -60,23 +67,31 @@ export function ProfileForm({ user }: Props) {
     setLoading(true);
     setMessage("Mise à jour du profil...");
 
-    if (!photoUrl) {
-      setMessage("Erreur : La photo de profil est obligatoire.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { error } = await supabase
+      // 1. Mise à jour du profil (Table profiles)
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({
           name,
           bio,
           photo_url: photoUrl,
+          phone,
+          region: selectedRegion,
+          city,
+          interests: interests.split(",").map((i: string) => i.trim()).filter(Boolean)
         })
         .eq("id", user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // 2. Mise à jour du mot de passe si renseigné
+      if (password) {
+        if (password.length < 8) throw new Error("Le mot de passe doit faire au moins 8 caractères.");
+        const { error: pwdError } = await supabase.auth.updateUser({ password });
+        if (pwdError) throw pwdError;
+        setPassword("");
+      }
+
       setMessage("Profil mis à jour avec succès !");
       router.refresh();
     } catch (error: any) {
@@ -87,7 +102,8 @@ export function ProfileForm({ user }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6">
+    <form onSubmit={handleSubmit} className="grid gap-8">
+      {/* Photo de profil */}
       <div className="flex flex-col items-center gap-4">
         <div 
           className="relative h-32 w-32 cursor-pointer group"
@@ -97,56 +113,112 @@ export function ProfileForm({ user }: Props) {
             <img 
               src={photoUrl} 
               alt="Profil" 
-              className="h-full w-full rounded-full object-cover border-4 border-accent transition group-hover:opacity-70" 
+              className="h-full w-full rounded-full object-cover border-4 border-accent transition group-hover:opacity-70 shadow-lg" 
             />
           ) : (
-            <div className="h-full w-full rounded-full bg-slate-800 flex items-center justify-center border-4 border-dashed border-white/20 group-hover:border-accent">
-              <UserRound className="h-12 w-12 text-white/20 group-hover:text-accent" />
+            <div className="h-full w-full rounded-full bg-foreground/5 flex items-center justify-center border-4 border-dashed border-foreground/20 group-hover:border-accent">
+              <UserRound className="h-12 w-12 text-muted group-hover:text-accent" />
             </div>
           )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-            <Camera className="h-8 w-8 text-white" />
+            <Camera className="h-8 w-8 text-foreground" />
           </div>
         </div>
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleUpload} 
-          accept="image/*" 
-          className="hidden" 
-        />
-        <p className="text-xs text-muted">Cliquez sur le cercle pour changer votre photo (Obligatoire)</p>
+        <input type="file" ref={fileInputRef} onChange={handleUpload} accept="image/*" className="hidden" />
+        <p className="text-xs text-muted">Cliquez pour changer votre photo</p>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-6 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-semibold">
-          Prénom
+          Nom Complet
+          <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Prénom Nom" />
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Email
+          <Input value={user.email} disabled className="opacity-60 cursor-not-allowed bg-foreground/5" />
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Téléphone
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="06 12 34 56 78" />
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Âge
+          <Input value={age} disabled className="opacity-60 cursor-not-allowed bg-foreground/5" />
+          <p className="text-[10px] text-muted italic">L&#39;âge ne peut plus être modifié après l&#39;inscription.</p>
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Pays / Région
+          <select 
+            value={selectedRegion}
+            onChange={(e) => setSelectedRegion(e.target.value)}
+            className="h-11 w-full rounded-xl border border-foreground/10 bg-foreground/5 px-3 py-1 text-sm font-medium outline-none focus:border-accent transition"
+          >
+            {Object.keys(CITIES_BY_REGION).map(region => (
+              <option key={region} value={region}>{region}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Ville
+          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lille" list="cities-profile" />
+          <datalist id="cities-profile">
+            {citiesInRegion.map(city => (
+              <option key={city} value={city} />
+            ))}
+          </datalist>
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Nouveau Mot de Passe
           <Input 
-            value={name} 
-            onChange={(e) => setName(e.target.value)} 
-            required 
-            placeholder="Votre prénom" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            type="password" 
+            placeholder="Laisser vide pour ne pas changer" 
+            minLength={8}
           />
         </label>
-        
+      </div>
+
+      <div className="grid gap-6">
         <label className="grid gap-2 text-sm font-semibold">
           Bio
           <textarea 
             value={bio} 
             onChange={(e) => setBio(e.target.value)} 
-            placeholder="Dites-nous en plus sur vous..." 
-            className="min-h-24 w-full rounded-xl border border-white/20 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-accent"
+            placeholder="Dites-nous en plus sur vous, vos passions..." 
+            className="min-h-24 w-full rounded-xl border border-foreground/10 bg-foreground/5 px-4 py-3 text-sm text-foreground outline-none focus:border-accent transition"
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-accent" />
+            Centres d&#39;intérêt <span className="font-normal text-muted text-xs">(séparés par des virgules)</span>
+          </span>
+          <Input 
+            value={interests} 
+            onChange={(e) => setInterests(e.target.value)} 
+            placeholder="Jazz, Vin nature, Cuisine, Randonnée..." 
           />
         </label>
       </div>
 
       <Button type="submit" disabled={loading} className="py-6 text-lg font-bold">
-        {loading ? "Action en cours..." : "Enregistrer les modifications"}
+        {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+        {loading ? "Enregistrement..." : "Mettre à jour mon profil"}
       </Button>
 
-      <p className={`text-sm font-semibold text-center ${message.includes("Erreur") ? "text-danger" : "text-success"}`}>
-        {message}
-      </p>
+      {message && (
+        <p className={`text-sm font-semibold text-center p-3 rounded-xl ${message.includes("Erreur") ? "bg-red-500/10 text-danger border border-red-500/20" : "bg-emerald-500/10 text-success border border-emerald-500/20"}`}>
+          {message}
+        </p>
+      )}
     </form>
   );
 }

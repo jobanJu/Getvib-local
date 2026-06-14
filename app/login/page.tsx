@@ -10,7 +10,7 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-muted">Retrouvez vos soirées, messages et notifications.</p>
         <AuthForm mode="login" />
         <p className="mt-4 text-sm text-muted">
-          Pas encore inscrit ? <Link className="font-semibold text-white" href="/signup">Créer un compte</Link>
+          Pas encore inscrit ? <Link className="font-semibold text-foreground" href="/signup">Créer un compte</Link>
         </p>
       </Card>
     </section>

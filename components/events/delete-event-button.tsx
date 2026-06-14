@@ -50,12 +50,13 @@ export function DeleteEventButton({ eventId, eventTitle, onDeleted, className }:
     <Button
       type="button"
       variant="secondary"
+      size="sm"
       onClick={handleDelete}
       disabled={loading}
       className={className ?? "text-red-400 border-red-400/20 hover:bg-red-400/10"}
     >
-      <Trash2 className="h-4 w-4 mr-2" />
-      {loading ? "Suppression..." : "Supprimer"}
+      <Trash2 className="h-4 w-4 sm:mr-1.5" />
+      <span className="hidden sm:inline">{loading ? "..." : "Supprimer"}</span>
     </Button>
   );
 }

@@ -9,6 +9,7 @@ export function MessagesClientPage() {
   const { user, loading, getIdToken } = useAuth();
   const router = useRouter();
   const [chats, setChats] = useState<any[]>([]);
+  const [friends, setFriends] = useState<any[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
 
   useEffect(() => {
@@ -18,9 +19,22 @@ export function MessagesClientPage() {
     }
 
     if (user) {
-      fetchChats();
+      Promise.all([fetchChats(), fetchFriends()]).finally(() => setChatsLoading(false));
     }
   }, [user, loading, router]);
+
+  async function fetchFriends() {
+    try {
+      const idToken = await getIdToken();
+      const res = await fetch("/api/friends/list", {
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const data = await res.json();
+      setFriends(data.friends || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   async function fetchChats() {
     try {
@@ -47,5 +61,5 @@ export function MessagesClientPage() {
     );
   }
 
-  return <ChatInterface initialChats={chats} initialUserId={user?.id || ""} />;
+  return <ChatInterface initialChats={chats} initialUserId={user?.id || ""} friends={friends} />;
 }

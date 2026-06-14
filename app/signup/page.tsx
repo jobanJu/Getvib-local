@@ -10,7 +10,7 @@ export default function SignupPage() {
         <p className="mt-2 text-sm text-muted">Lancez votre première vibe à Lille.</p>
         <AuthForm mode="signup" />
         <p className="mt-4 text-sm text-muted">
-          Déjà inscrit ? <Link className="font-semibold text-white" href="/login">Se connecter</Link>
+          Déjà inscrit ? <Link className="font-semibold text-foreground" href="/login">Se connecter</Link>
         </p>
       </Card>
     </section>

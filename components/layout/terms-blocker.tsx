@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/features/auth/auth-provider";
-import { createClient } from "@/lib/supabase/client";
-import { CheckCircle2, ShieldCheck, Star } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 const commandements = [
   { id: 1, title: "Mineurs interdits", text: "GetVib est strictement réservé aux personnes majeures (+18 ans)." },
@@ -32,8 +30,8 @@ export function TermsBlocker() {
   const { user, profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [refused, setRefused] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const supabase = createClient();
 
   if (!user || profile?.accepted_terms || accepted) return null;
 
@@ -41,19 +39,12 @@ export function TermsBlocker() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ accepted_terms: true })
-        .eq("id", user?.id)
-        .select("id, accepted_terms");
-
-      if (error) throw error;
-      // Une mise à jour qui ne touche aucune ligne (profil absent ou bloqué par
-      // RLS) ne lève pas d'erreur : on le détecte explicitement.
-      if (!data || data.length === 0) {
-        throw new Error("Profil introuvable. Déconnecte-toi puis reconnecte-toi avant de réessayer.");
+      const res = await fetch("/api/profile/accept-terms", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error([data.error, data.code, data.details].filter(Boolean).join(" · ") || `Erreur ${res.status}`);
       }
-      // On débloque tout de suite, sans dépendre du rechargement du contexte.
+      // Débloque immédiatement, sans dépendre du rechargement du contexte.
       setAccepted(true);
       await refreshProfile();
     } catch (error: unknown) {
@@ -62,6 +53,12 @@ export function TermsBlocker() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleRefuse() {
+    // Refus : on garde le mur affiché, l'accès reste bloqué.
+    setRefused(true);
+    setErrorMsg("");
   }
 
   return (
@@ -73,15 +70,15 @@ export function TermsBlocker() {
               <ShieldCheck className="h-4 w-4" />
               Étape Obligatoire
             </div>
-            <h1 className="text-4xl font-black italic uppercase text-white">La Charte de Confiance</h1>
+            <h1 className="text-4xl font-black italic uppercase text-foreground">La Charte de Confiance</h1>
             <p className="text-muted">Vous devez lire et accepter nos 18 commandements pour accéder à GetVib.</p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
             {commandements.map((item) => (
-              <div key={item.id} className="p-4 rounded-xl border border-white/5 bg-white/5 relative">
-                <span className="absolute top-2 right-3 text-2xl font-black text-white/5 italic">{item.id}</span>
-                <h3 className="font-bold text-white text-sm mb-1">{item.title}</h3>
+              <div key={item.id} className="p-4 rounded-xl border border-foreground/5 bg-foreground/5 relative">
+                <span className="absolute top-2 right-3 text-2xl font-black text-foreground/5 italic">{item.id}</span>
+                <h3 className="font-bold text-foreground text-sm mb-1">{item.title}</h3>
                 <p className="text-xs text-muted leading-relaxed">{item.text}</p>
               </div>
             ))}
@@ -89,11 +86,32 @@ export function TermsBlocker() {
 
           <div className="flex flex-col items-center gap-4 bg-accent/5 p-6 rounded-2xl border border-accent/20">
             <p className="text-sm text-center text-muted italic">
-              "En cliquant sur le bouton ci-dessous, je m'engage à respecter scrupuleusement ces 18 règles sous peine de suspension immédiate de mon compte."
+              En cliquant sur « J&apos;accepte », je m&apos;engage à respecter scrupuleusement ces 18 règles sous peine de suspension immédiate de mon compte.
             </p>
-            <Button onClick={handleAccept} disabled={loading} size="lg" className="w-full sm:w-auto px-12 py-7 text-lg font-black uppercase italic">
-              {loading ? "Validation..." : "J'ai lu et j'accepte le règlement"}
-            </Button>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <Button
+                onClick={handleRefuse}
+                disabled={loading}
+                variant="secondary"
+                size="lg"
+                className="px-8 py-7 text-base font-bold uppercase"
+              >
+                Je refuse
+              </Button>
+              <Button
+                onClick={handleAccept}
+                disabled={loading}
+                size="lg"
+                className="px-12 py-7 text-lg font-black uppercase italic"
+              >
+                {loading ? "Validation..." : "J'ai lu et j'accepte"}
+              </Button>
+            </div>
+            {refused && (
+              <p className="text-sm font-semibold text-danger text-center">
+                Accès bloqué. L&apos;acceptation de la charte est obligatoire pour entrer sur GetVib.
+              </p>
+            )}
             {errorMsg && (
               <p className="text-sm font-semibold text-danger text-center">{errorMsg}</p>
             )}

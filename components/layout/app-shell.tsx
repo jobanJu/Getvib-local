@@ -45,8 +45,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-xl px-3 py-2 text-sm font-semibold text-muted transition hover:bg-white/8 hover:text-white",
-                  pathname.startsWith(item.href) && "bg-white/10 text-white",
+                  "rounded-xl px-3 py-2 text-sm font-semibold text-muted transition hover:bg-foreground/8 hover:text-foreground",
+                  pathname.startsWith(item.href) && "bg-foreground/10 text-foreground",
                 )}
               >
                 {item.label}
@@ -55,13 +55,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link className="hidden rounded-xl p-2 text-muted transition hover:bg-white/8 hover:text-white md:block" href="/notifications">
+            <Link className="hidden rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground md:block" href="/notifications">
               <Bell className="h-5 w-5" />
             </Link>
-            <Link className="hidden rounded-xl p-2 text-muted transition hover:bg-white/8 hover:text-white md:block" href="/safety">
+            <Link className="hidden rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground md:block" href="/safety">
               <Shield className="h-5 w-5" />
             </Link>
-            <Link className="rounded-xl p-2 text-muted transition hover:bg-white/8 hover:text-white" href="/settings">
+            <Link className="rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground" href="/settings">
               <Settings className="h-5 w-5" />
             </Link>
           </div>
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={cn(
                     "grid place-items-center gap-1 rounded-xl py-1.5 text-[0.62rem] font-semibold text-muted transition",
-                    active && "text-white",
+                    active && "text-foreground",
                   )}
                 >
                   <Icon className={cn("h-5 w-5", active && "text-accent")} />
@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/create"
                 aria-label="Créer une soirée"
-                className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-accent text-white shadow-[0_10px_30px_rgba(246,51,154,0.55)] ring-4 ring-background transition active:scale-95"
+                className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-accent text-foreground shadow-[0_10px_30px_rgba(246,51,154,0.55)] ring-4 ring-background transition active:scale-95"
               >
                 <Plus className="h-6 w-6" />
               </Link>
@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={cn(
                     "grid place-items-center gap-1 rounded-xl py-1.5 text-[0.62rem] font-semibold text-muted transition",
-                    active && "text-white",
+                    active && "text-foreground",
                   )}
                 >
                   <Icon className={cn("h-5 w-5", active && "text-accent")} />

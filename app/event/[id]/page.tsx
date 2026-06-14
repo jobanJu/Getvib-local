@@ -1,11 +1,15 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, LockKeyhole, MapPin, ShieldCheck, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getEventForViewer } from "@/features/events/server";
 import { formatEventDate } from "@/lib/date";
 import { ApplicationForm } from "@/features/events/application-form";
+
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +17,10 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function EventDetailPage({ params }: Props) {
   const { id } = await params;
-  const event = await getEventForViewer(id);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  const event = await getEventForViewer(id, user?.id);
   
   if (!event) notFound();
 
@@ -45,7 +52,7 @@ export default async function EventDetailPage({ params }: Props) {
               Zone publique: {event.city}
             </span>
             {event.addressVisible ? (
-              <span className="flex items-center gap-3 text-white font-medium">
+              <span className="flex items-center gap-3 text-foreground font-medium">
                 <MapPin className="h-5 w-5 text-emerald-400" />
                 {event.address}
               </span>
@@ -79,15 +86,26 @@ export default async function EventDetailPage({ params }: Props) {
               {event.city}
             </span>
           </div>
-          <div className="mt-5 rounded-2xl border border-white/10 bg-white/8 p-4">
-            <p className="text-sm font-semibold text-white">{event.contributionAmount > 0 ? `${event.contributionAmount} €` : "Gratuit"}</p>
+          <div className="mt-5 rounded-2xl border border-foreground/10 bg-foreground/8 p-4">
+            <p className="text-sm font-semibold text-foreground">{event.contributionAmount > 0 ? `${event.contributionAmount} €` : "Gratuit"}</p>
             <p className="mt-1 text-sm text-muted">{event.type === "vibplus" ? "Participation possible, justifiée par l’hôte." : "Vib ouvert à tous."}</p>
           </div>
         </Card>
 
         <Card className="p-5">
           <h2 className="text-xl font-semibold mb-4">Rejoindre la soirée</h2>
-          <ApplicationForm eventId={id} />
+          {user?.id === event.hostId ? (
+            <div className="grid gap-2">
+                <Button className="w-full bg-accent text-foreground font-bold py-6" asChild>
+                    <Link href={`/event/${id}/manage`}>Gérer cette soirée</Link>
+                </Button>
+                <p className="text-[10px] text-center text-muted uppercase font-bold tracking-widest">
+                    Vous êtes l&#39;hôte de cette vibe
+                </p>
+            </div>
+          ) : (
+            <ApplicationForm eventId={id} />
+          )}
         </Card>
       </aside>
     </section>

@@ -50,23 +50,16 @@ export function ApplicationForm({ eventId }: { eventId: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
-      <label className="grid gap-2 text-sm font-semibold">
-        Pourquoi souhaitez-vous rejoindre cette soirée ?
-        <Textarea 
-          placeholder="Expliquez votre vibe, simplement." 
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </label>
+    <div className="grid gap-4">
+      <p className="text-sm text-muted leading-relaxed">
+        Votre profil sera envoyé à l&#39;hôte pour validation. Vous recevrez une notification dès qu&#39;il aura fait son choix.
+      </p>
       {status === "error" && (
         <p className="text-xs text-red-400">Une erreur est survenue, réessayez.</p>
       )}
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Envoi..." : "Envoyer ma candidature"}
+      <Button onClick={onSubmit} className="w-full py-6 text-lg font-bold" disabled={loading}>
+        {loading ? "Envoi..." : "Rejoindre la soirée"}
       </Button>
-    </form>
+    </div>
   );
 }

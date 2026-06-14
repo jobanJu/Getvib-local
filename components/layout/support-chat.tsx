@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { Send, MessageSquare } from "lucide-react";
@@ -53,7 +52,7 @@ export function SupportChat() {
     return (
       <button 
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-accent text-white shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-50"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-accent text-foreground shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-50"
       >
         <MessageSquare className="h-6 w-6" />
       </button>
@@ -62,13 +61,13 @@ export function SupportChat() {
 
   return (
     <div className="fixed bottom-6 right-6 w-80 sm:w-96 z-50">
-      <Card className="border-white/10 bg-slate-900 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
-        <div className="bg-accent p-4 flex justify-between items-center text-white">
+      <Card className="border-foreground/10 bg-card shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
+        <div className="bg-accent p-4 flex justify-between items-center text-foreground">
           <h3 className="font-bold flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Support & Réclamations
           </h3>
-          <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white">✕</button>
+          <button onClick={() => setOpen(false)} className="text-foreground/60 hover:text-foreground">✕</button>
         </div>
         
         <div className="p-4">
@@ -90,7 +89,7 @@ export function SupportChat() {
                   onChange={(e) => setMessage(e.target.value)}
                   required
                   placeholder="Décrivez votre problème ici..."
-                  className="min-h-32 bg-slate-950 border-white/10"
+                  className="min-h-32 bg-card-soft border-foreground/10"
                 />
               </div>
               <Button type="submit" disabled={loading || !message.trim()} className="w-full">

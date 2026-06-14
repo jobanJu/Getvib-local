@@ -35,7 +35,7 @@ export function DiscoverClient({ events, city = "Lille" }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher une vibe, une ville…"
-            className="h-12 w-full rounded-2xl border border-border bg-white/5 pl-12 pr-4 text-sm text-white outline-none transition focus:border-accent focus:bg-white/8"
+            className="h-12 w-full rounded-2xl border border-border bg-foreground/5 pl-12 pr-4 text-sm text-foreground outline-none transition focus:border-accent focus:bg-foreground/8"
           />
         </div>
       </div>

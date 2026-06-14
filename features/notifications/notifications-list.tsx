@@ -55,7 +55,7 @@ export function NotificationsList() {
         const Icon = icons[n.type] || Bell;
         return (
           <Card key={n.id} className={cn("flex items-start gap-4 p-4", !n.read && "bg-accent/5 border-accent/20")}>
-            <div className={cn("rounded-full p-2", !n.read ? "bg-accent text-white" : "bg-white/10 text-muted")}>
+            <div className={cn("rounded-full p-2", !n.read ? "bg-accent text-foreground" : "bg-foreground/10 text-muted")}>
               <Icon className="h-5 w-5" />
             </div>
             <div className="grid gap-1">

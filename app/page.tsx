@@ -25,7 +25,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#06060A_0%,rgba(6,6,10,0.82)_42%,rgba(6,6,10,0.36)_100%)]" />
         <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl content-center px-4 pb-24 pt-16 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <p className="mb-5 inline-flex rounded-full border border-white/10 bg-white/8 px-3 py-1 text-sm font-semibold text-pink-100">
+            <p className="mb-5 inline-flex rounded-full border border-foreground/10 bg-foreground/8 px-3 py-1 text-sm font-semibold text-pink-100">
               Lancement MVP à Lille
             </p>
             <h1 className="text-5xl font-black leading-[0.96] tracking-tight sm:text-7xl">
@@ -78,7 +78,7 @@ export default function LandingPage() {
         </div>
         <div className="flex flex-wrap gap-3">
           {vibes.map((vibe) => (
-            <span key={vibe} className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm font-semibold">
+            <span key={vibe} className="rounded-full border border-foreground/10 bg-foreground/8 px-4 py-2 text-sm font-semibold">
               {vibe}
             </span>
           ))}
@@ -99,7 +99,7 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/8 p-5">
+          <div className="rounded-2xl border border-foreground/10 bg-foreground/8 p-5">
             <UsersRound className="h-8 w-8 text-accent-secondary" />
             <p className="mt-4 text-4xl font-black">10</p>
             <p className="mt-2 text-muted">premiers utilisateurs réels à Lille pour valider le MVP.</p>
