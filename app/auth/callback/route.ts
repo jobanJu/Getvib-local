@@ -16,9 +16,6 @@ export async function GET(request: Request) {
     const { error, data } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error && data.user) {
-      // Si l'utilisateur vient d'un mail de reset, on force la redirection
-      // vers le changement de mot de passe si c'est ce qui était prévu.
-      
       const userId = data.user.id;
       const { data: profile } = await supabase
         .from("profiles")
@@ -26,15 +23,23 @@ export async function GET(request: Request) {
         .eq("id", userId)
         .single();
 
-      // Priorité : Onboarding si profil incomplet
+      // Si c'est un lien de récupération de mot de passe, Supabase pose une session spéciale.
+      // Le paramètre 'next' devrait déjà pointer vers /settings/update-password
+      
+      // Priorité 1 : Onboarding si profil inexistant (ex: premier login via OAuth ou Recovery d'un compte non fini)
       if (!profile?.pseudo || !profile?.age) {
         return NextResponse.redirect(`${origin}/onboarding`);
       }
 
+      // Priorité 2 : Redirection demandée
       return NextResponse.redirect(`${origin}${next}`);
+    } else if (error) {
+      console.error("Auth callback error:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
     }
   }
 
-  // Fallback si erreur ou pas de code
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  // Si on arrive ici sans code, c'est peut-être un hash (#). 
+  // On redirige vers login qui a maintenant un handler client pour ça.
+  return NextResponse.redirect(`${origin}/login`);
 }
