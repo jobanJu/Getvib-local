@@ -6,12 +6,13 @@ import { Card } from "@/components/ui/card";
 import { ProfileForm } from "@/features/profile/profile-form";
 import { Moon, Sun, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageLoader } from "@/components/ui/page-loader";
 
 export default function SettingsPage() {
   const { user, profile, loading } = useAuth();
   const { theme, setTheme } = useTheme();
 
-  if (loading) return <div className="p-8 animate-pulse text-muted">Chargement...</div>;
+  if (loading) return <PageLoader />;
   if (!user) return null;
 
   return (

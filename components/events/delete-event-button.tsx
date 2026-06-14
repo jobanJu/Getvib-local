@@ -19,7 +19,7 @@ export function DeleteEventButton({ eventId, eventTitle, onDeleted, className }:
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
-    const label = eventTitle ? `« ${eventTitle} »` : "cette soirée";
+    const label = eventTitle ? `« ${eventTitle} »` : "cette vibe";
     if (!window.confirm(`Supprimer ${label} ? Cette action est définitive et annule les candidatures et discussions liées.`)) {
       return;
     }

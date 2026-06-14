@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-provider";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { AVAILABLE_CITIES, CITIES_BY_REGION } from "@/lib/constants";
+import { AVAILABLE_CITIES, CITIES_BY_REGION, VIBES } from "@/lib/constants";
 
 const fields = "grid gap-2 text-sm font-semibold";
 
@@ -33,18 +33,6 @@ function IconInput({ icon: Icon, className, ...props }: { icon: React.ElementTyp
   );
 }
 
-// Vibes = grandes catégories générales (le détail précis va dans les centres
-// d'intérêt recherchés). Servent de base à la catégorisation / au filtrage.
-const VIBES = [
-  "Musique",
-  "Gastronomie",
-  "Art & Culture",
-  "Jeux",
-  "Sport",
-  "Chill",
-  "Fête",
-  "Plein air",
-];
 
 export function CreateEventForm() {
   const router = useRouter();
@@ -86,14 +74,16 @@ export function CreateEventForm() {
     }
   }
 
-  async function submit(formData: FormData) {
+  async function submit(formData: FormData, explicitStatus?: "draft" | "published") {
+    const finalStatus = explicitStatus || "published";
+    
     if (!vibe) {
       setStatus("Erreur : choisissez une vibe.");
       return;
     }
 
     setSubmitting(true);
-    setStatus("Publication en cours...");
+    setStatus(finalStatus === "published" ? "Publication en cours..." : "Enregistrement du brouillon...");
     const token = await getIdToken();
     const payload = Object.fromEntries(formData.entries());
 
@@ -110,17 +100,18 @@ export function CreateEventForm() {
         ...payload,
         vibe,
         type,
+        status: finalStatus,
         region: selectedRegion,
         address: payload.address,
         image: finalImageUrl,
-        contributionAmount: type === "vibplus" ? payload.contributionAmount : 0,
+        contributionAmount: type === "vibplus" ? Number(payload.contributionAmount) : 0,
         interestsRequired: String(payload.interestsRequired || "").split(","),
       }),
     });
 
     if (response.ok) {
       const { event } = await response.json();
-      setStatus("Soirée publiée ! Redirection...");
+      setStatus(finalStatus === "published" ? "Soirée publiée ! Redirection..." : "Brouillon enregistré !");
       router.push(`/event/${event.id}`);
     } else {
       setSubmitting(false);
@@ -130,7 +121,7 @@ export function CreateEventForm() {
 
   return (
     <Card className="border-foreground/10 bg-card shadow-2xl">
-      <form action={submit} className="grid gap-5 p-5">
+      <form onSubmit={(e) => { e.preventDefault(); submit(new FormData(e.currentTarget)); }} className="grid gap-5 p-5">
         {/* Image — upload direct */}
         <div className={fields}>
           Photo de la soirée
@@ -265,9 +256,23 @@ export function CreateEventForm() {
           <IconInput icon={Sparkles} name="interestsRequired" placeholder="Ex: jazz, vin nature, vinyles" />
         </label>
 
-        <Button type="submit" disabled={submitting || uploading} className="mt-4 py-6 text-lg font-bold">
-          {submitting ? "Publication..." : "Publier la soirée"}
-        </Button>
+        <div className="mt-4 flex flex-col gap-3">
+          <Button type="submit" disabled={submitting || uploading} className="py-6 text-lg font-bold shadow-[0_8px_32px_rgba(246,51,154,0.2)]">
+            {submitting ? "Publication..." : "Publier la soirée"}
+          </Button>
+          <Button 
+            type="button" 
+            variant="secondary" 
+            disabled={submitting || uploading} 
+            onClick={(e) => {
+              const form = e.currentTarget.closest("form");
+              if (form) submit(new FormData(form), "draft");
+            }}
+            className="py-4"
+          >
+            Enregistrer en brouillon
+          </Button>
+        </div>
         <p className={cn("min-h-5 text-center text-sm font-semibold", status.startsWith("Erreur") ? "text-danger" : "text-success")}>{status}</p>
       </form>
     </Card>

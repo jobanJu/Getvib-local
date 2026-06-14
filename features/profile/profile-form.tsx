@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { Camera, UserRound, Loader2, Sparkles } from "lucide-react";
+import { Camera, UserRound, Loader2, Sparkles, X } from "lucide-react";
 import { AVAILABLE_CITIES, CITIES_BY_REGION } from "@/lib/constants";
 
 type Props = {
@@ -18,16 +18,33 @@ export function ProfileForm({ user }: Props) {
   const [message, setMessage] = useState("");
   const [photoUrl, setPhotoUrl] = useState(user?.photo_url || "");
   const [name, setName] = useState(user?.name || "");
+  const [pseudo, setPseudo] = useState(user?.pseudo || "");
   const [bio, setBio] = useState(user?.bio || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [age, setAge] = useState(user?.age || "");
   const [selectedRegion, setSelectedRegion] = useState<string>(user?.region || "France");
   const [city, setCity] = useState(user?.city || "");
-  const [interests, setInterests] = useState(user?.interests?.join(", ") || "");
+  const [interestsList, setInterestsList] = useState<string[]>(user?.interests || []);
+  const [interestInput, setInterestInput] = useState("");
   const [password, setPassword] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+
+  const addInterest = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = interestInput.trim().replace(/,$/, "");
+      if (val && !interestsList.includes(val)) {
+        setInterestsList([...interestsList, val]);
+        setInterestInput("");
+      }
+    }
+  };
+
+  const removeInterest = (tag: string) => {
+    setInterestsList(interestsList.filter(i => i !== tag));
+  };
 
   const citiesInRegion = CITIES_BY_REGION[selectedRegion as keyof typeof CITIES_BY_REGION] || [];
 
@@ -68,21 +85,33 @@ export function ProfileForm({ user }: Props) {
     setMessage("Mise à jour du profil...");
 
     try {
+      // Pseudo : normalisé + validé. On ne l'envoie que s'il a changé.
+      const normalizedPseudo = String(pseudo).trim().toLowerCase().replace(/^@+/, "");
+      const pseudoChanged = normalizedPseudo !== (user?.pseudo || "");
+      if (pseudoChanged && !/^[a-z0-9_]{3,20}$/.test(normalizedPseudo)) {
+        throw new Error("Pseudo invalide : 3 à 20 caractères, lettres minuscules, chiffres ou _.");
+      }
+
       // 1. Mise à jour du profil (Table profiles)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           name,
+          ...(pseudoChanged ? { pseudo: normalizedPseudo } : {}),
           bio,
           photo_url: photoUrl,
           phone,
           region: selectedRegion,
           city,
-          interests: interests.split(",").map((i: string) => i.trim()).filter(Boolean)
+          interests: interestsList
         })
         .eq("id", user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // 23505 = violation de contrainte unique (pseudo déjà pris).
+        if ((profileError as any).code === "23505") throw new Error("Ce pseudo est déjà pris, choisis-en un autre.");
+        throw profileError;
+      }
 
       // 2. Mise à jour du mot de passe si renseigné
       if (password) {
@@ -132,6 +161,15 @@ export function ProfileForm({ user }: Props) {
         <label className="grid gap-2 text-sm font-semibold">
           Nom Complet
           <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Prénom Nom" />
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold">
+          Pseudo
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">@</span>
+            <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="lele59" className="pl-7" />
+          </div>
+          <p className="text-[10px] text-muted italic">Identifiant unique pour la recherche d&#39;amis.</p>
         </label>
 
         <label className="grid gap-2 text-sm font-semibold">
@@ -199,13 +237,25 @@ export function ProfileForm({ user }: Props) {
         <label className="grid gap-2 text-sm font-semibold">
           <span className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-accent" />
-            Centres d&#39;intérêt <span className="font-normal text-muted text-xs">(séparés par des virgules)</span>
+            Centres d&#39;intérêt <span className="font-normal text-muted text-xs">(Entrée pour ajouter)</span>
           </span>
-          <Input 
-            value={interests} 
-            onChange={(e) => setInterests(e.target.value)} 
-            placeholder="Jazz, Vin nature, Cuisine, Randonnée..." 
-          />
+          <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-foreground/10 bg-foreground/5 min-h-[44px]">
+            {interestsList.map((tag) => (
+                <span key={tag} className="flex items-center gap-1 bg-accent text-white px-3 py-1 rounded-full text-xs font-bold animate-in zoom-in-50">
+                    {tag}
+                    <button type="button" onClick={() => removeInterest(tag)} className="hover:text-black transition">
+                        <X className="h-3 w-3" />
+                    </button>
+                </span>
+            ))}
+            <input 
+                value={interestInput}
+                onChange={(e) => setInterestInput(e.target.value)}
+                onKeyDown={addInterest}
+                placeholder={interestsList.length === 0 ? "Ex: Jazz, Vin nature..." : "Ajouter..."}
+                className="flex-1 bg-transparent border-none outline-none text-sm min-w-[120px]"
+            />
+          </div>
         </label>
       </div>
 

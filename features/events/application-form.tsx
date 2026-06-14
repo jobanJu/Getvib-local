@@ -57,8 +57,8 @@ export function ApplicationForm({ eventId }: { eventId: string }) {
       {status === "error" && (
         <p className="text-xs text-red-400">Une erreur est survenue, réessayez.</p>
       )}
-      <Button onClick={onSubmit} className="w-full py-6 text-lg font-bold" disabled={loading}>
-        {loading ? "Envoi..." : "Rejoindre la soirée"}
+      <Button onClick={onSubmit} className="w-full py-6 text-lg font-bold" loading={loading}>
+        {loading ? "Envoi..." : "Rejoindre la vibe"}
       </Button>
     </div>
   );

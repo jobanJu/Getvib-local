@@ -7,6 +7,17 @@ export function parseString(value: unknown, label: string, max = 240) {
   return text;
 }
 
+// Pseudo (@handle) : 3–20 caractères, minuscules / chiffres / underscore.
+// Renvoie le pseudo normalisé en minuscules (l'unicité est insensible à la casse).
+export function parsePseudo(value: unknown) {
+  const pseudo = String(value || "").trim().toLowerCase().replace(/^@+/, "");
+  if (!pseudo) throw new Error("Le pseudo est requis.");
+  if (!/^[a-z0-9_]{3,20}$/.test(pseudo)) {
+    throw new Error("Pseudo invalide : 3 à 20 caractères, lettres minuscules, chiffres ou _ uniquement.");
+  }
+  return pseudo;
+}
+
 export function parseNumber(value: unknown, label: string, min = 0, max = 9999) {
   const number = Number(value);
   if (!Number.isFinite(number) || number < min || number > max) {
@@ -55,5 +66,6 @@ export function parseCreateEventInput(body: Record<string, unknown>): CreateEven
     type,
     contributionAmount,
     contributionReason: contributionAmount > 0 ? parseString(body.contributionReason, "Contribution reason", 120) : "",
+    status: (body.status === "draft" || body.status === "published") ? body.status : "published",
   };
 }

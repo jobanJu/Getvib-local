@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { DeleteAccountButton } from "@/components/auth/delete-account-button";
+import { BadgeCollection } from "@/components/profile/badge-collection";
+import { VerificationCard } from "@/components/profile/verification-card";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { 
   listEventsAttending, 
   listEventsByHost, 
@@ -56,10 +60,31 @@ export default async function ProfilePage() {
   const interests: string[] = profile?.interests || [];
   const guests = events.reduce((sum, e) => sum + e.participants.length, 0);
 
+  // Une demande de vérification est-elle déjà en attente ? (table verrouillée → service role)
+  const admin = createAdminClient();
+  const { data: pendingVerif } = await admin
+    .from("verification_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  // Stats pour le moteur de badges.
+  const badgeStats = {
+    verificationLevel: verification,
+    eventsHosted: events.length,
+    vibPlusHosted: events.filter((e) => e.type === "vibplus").length,
+    totalGuests: guests,
+    eventsAttended: attending.length + pastEvents.length,
+    friends: friends.length,
+  };
+
+  const firstName = name.split(" ")[0] || name;
+
   const stats = [
-    { value: events.length, label: "Soirées" },
+    { value: events.length, label: "Vibes" },
     { value: guests, label: "Invités" },
-    { value: `Niv. ${verification}`, label: "Vérif." },
+    { value: verification > 0 ? "Vérifié" : "—", label: "Profil" },
   ];
 
   return (
@@ -89,11 +114,12 @@ export default async function ProfilePage() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight">{name}</h1>
             {verification > 0 ? (
-              <Badge tone="green"><ShieldCheck className="mr-1 h-3.5 w-3.5" />Vérifié niveau {verification}</Badge>
+              <Badge tone="green"><ShieldCheck className="mr-1 h-3.5 w-3.5" />Le Jeune · Vérifié</Badge>
             ) : (
               <Badge tone="neutral">Non vérifié</Badge>
             )}
           </div>
+          {profile?.pseudo && <p className="text-sm font-semibold text-accent">@{profile.pseudo}</p>}
           <p className="mt-1 text-sm text-muted">{user.email} · membre depuis {memberSince(profile?.created_at)}</p>
 
           {profile?.bio ? (
@@ -123,6 +149,12 @@ export default async function ProfilePage() {
           </div>
         </div>
       </Card>
+
+      {/* Vérification de profil (manuelle, anti-faux-profil) */}
+      <VerificationCard verified={verification > 0} firstName={firstName} pending={!!pendingVerif} />
+
+      {/* Collection de badges */}
+      <BadgeCollection stats={badgeStats} />
 
       {/* Gestion des candidatures */}
       <ApplicationManager initialApplications={pendingApplications} />
@@ -195,7 +227,7 @@ export default async function ProfilePage() {
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-bold">
           <Calendar className="h-5 w-5 text-accent" />
-          Mes soirées
+          Mes vibes
           <span className="text-base font-normal text-muted">({events.length})</span>
         </h2>
         <Button variant="ghost" size="sm" asChild>
@@ -205,7 +237,7 @@ export default async function ProfilePage() {
 
       {events.length === 0 ? (
         <Card className="border-2 border-dashed p-10 text-center">
-          <p className="text-sm italic text-muted">Vous n&#39;avez pas encore organisé de soirée.</p>
+          <p className="text-sm italic text-muted">Vous n&#39;avez pas encore organisé de vibe.</p>
           <Button asChild className="mt-4">
             <Link href="/create">Organiser ma première vibe</Link>
           </Button>
@@ -283,7 +315,14 @@ export default async function ProfilePage() {
         </div>
       )}
 
-      <SignOutButton className="mt-8 w-full text-red-400 border-red-400/20 hover:bg-red-400/10 sm:w-auto" />
+      {/* Compte */}
+      <div className="mt-10 border-t border-foreground/10 pt-6">
+        <h2 className="mb-4 text-xl font-bold">Compte</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <SignOutButton className="w-full text-red-400 border-red-400/20 hover:bg-red-400/10 sm:w-auto" />
+          <DeleteAccountButton />
+        </div>
+      </div>
     </section>
   );
 }

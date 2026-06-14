@@ -22,6 +22,7 @@ export async function listNotifications(userId: string) {
     userId: row.user_id,
     type: row.type,
     title: row.title,
+    link: row.link,
     read: row.read,
     createdAt: row.created_at,
   }));

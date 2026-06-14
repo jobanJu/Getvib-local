@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
-import { Camera, Loader2, Plus } from "lucide-react";
+import { Camera, Plus, PartyPopper } from "lucide-react";
 import { AVAILABLE_CITIES, CITIES_BY_REGION } from "@/lib/constants";
 
 type Props = {
@@ -17,12 +17,31 @@ export function AuthForm({ mode }: Props) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("France");
   const supabase = createClient();
 
   const citiesInRegion = CITIES_BY_REGION[selectedRegion as keyof typeof CITIES_BY_REGION] || [];
+
+  // Pose les cookies d'auth côté serveur à partir de la session client (le client
+  // navigateur ne les écrit pas de façon fiable → sans ça, le serveur ne voit pas
+  // la connexion : /admin, etc.).
+  async function syncServerSession(session?: { access_token: string; refresh_token: string } | null) {
+    let s = session ?? null;
+    if (!s) {
+      const { data } = await supabase.auth.getSession();
+      s = data.session;
+    }
+    if (s) {
+      await fetch("/api/auth/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: s.access_token, refresh_token: s.refresh_token }),
+      }).catch(() => {});
+    }
+  }
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,7 +56,8 @@ export function AuthForm({ mode }: Props) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/discover`
+        // Passe par la route de callback qui échange le code contre une session.
+        redirectTo: `${window.location.origin}/auth/callback?next=/discover`
       }
     });
     if (error) {
@@ -58,7 +78,16 @@ export function AuthForm({ mode }: Props) {
         const region = String(formData.get("region") || "France");
         const city = String(formData.get("city") || "");
         const age = Number(formData.get("age") || 0);
+        const pseudoRaw = String(formData.get("pseudo") || "").trim().toLowerCase().replace(/^@+/, "");
         const fullName = `${firstName} ${lastName}`.trim();
+
+        // Pseudo obligatoire et unique : on valide le format puis la disponibilité
+        // AVANT de créer le compte (la table profiles n'est pas lisible côté client).
+        if (!/^[a-z0-9_]{3,20}$/.test(pseudoRaw)) {
+          throw new Error("Pseudo invalide : 3 à 20 caractères, lettres minuscules, chiffres ou _.");
+        }
+        const check = await fetch(`/api/profile/check-pseudo?pseudo=${encodeURIComponent(pseudoRaw)}`).then((r) => r.json());
+        if (!check.available) throw new Error(check.error || "Ce pseudo est déjà pris, choisis-en un autre.");
 
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -68,6 +97,7 @@ export function AuthForm({ mode }: Props) {
               display_name: fullName,
               first_name: firstName,
               last_name: lastName,
+              pseudo: pseudoRaw,
               region: region,
               city: city,
               age: age
@@ -79,8 +109,9 @@ export function AuthForm({ mode }: Props) {
 
         // Gestion de la photo si présente
         if (data.user) {
-          const updates: any = { 
+          const updates: any = {
             name: fullName,
+            pseudo: pseudoRaw,
             region: region,
             city: city,
             age: age
@@ -111,13 +142,22 @@ export function AuthForm({ mode }: Props) {
           setLoading(false);
           return;
         }
-        setMessage("Compte créé avec succès. Vous êtes connecté.");
+        // Compte créé + connecté → on pose les cookies serveur, puis confirmation.
+        await syncServerSession(data.session);
+        setSignupSuccess(true);
+        setLoading(false);
+        return;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: loginData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        // Synchronise la session vers le serveur PUIS rechargement complet pour
+        // que les cookies soient pris en compte par le rendu serveur.
+        await syncServerSession(loginData.session);
+        window.location.href = "/discover";
+        return;
       }
       router.push("/discover");
     } catch (error: any) {
@@ -125,6 +165,25 @@ export function AuthForm({ mode }: Props) {
       setMessage(`Erreur : ${error.message || "Erreur inconnue"}`);
       setLoading(false);
     }
+  }
+
+  if (signupSuccess) {
+    return (
+      <div className="mt-5 grid gap-5 text-center">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/15 text-accent">
+          <PartyPopper className="h-8 w-8" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black">Bienvenue dans la vibe 🥂</h2>
+          <p className="mt-2 text-sm text-muted">
+            Ton compte est créé et activé. Pense à faire vérifier ton profil pour décrocher le badge « Le Jeune ».
+          </p>
+        </div>
+        <Button onClick={() => { window.location.href = "/discover"; }} className="py-6 text-lg font-bold">
+          Entrer dans GetVib
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -156,6 +215,14 @@ export function AuthForm({ mode }: Props) {
               <Input name="lastName" required autoComplete="family-name" placeholder="Dupont" />
             </label>
           </div>
+          <label className="grid gap-2 text-sm font-semibold">
+            Pseudo
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">@</span>
+              <Input name="pseudo" required autoComplete="off" placeholder="lele59" pattern="[A-Za-z0-9_]{3,20}" title="3 à 20 caractères : lettres, chiffres ou _" className="pl-7" />
+            </div>
+            <p className="text-[10px] text-muted italic">Ton identifiant unique pour que tes amis te retrouvent (ex : @lele59).</p>
+          </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold">
               Pays / Région
@@ -200,8 +267,7 @@ export function AuthForm({ mode }: Props) {
         Mot de passe
         <Input name="password" type="password" required minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="••••••••" />
       </label>
-      <Button type="submit" disabled={loading}>
-        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+      <Button type="submit" loading={loading}>
         {mode === "signup" ? "Créer mon compte" : "Se connecter"}
       </Button>
       

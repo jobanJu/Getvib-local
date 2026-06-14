@@ -13,48 +13,104 @@ export async function listMessages(chatId: string, userId: string) {
 
   if (error) throw error;
   
+  // Une fois les messages listés, on marque comme lu
+  await markChatAsRead(chatId, userId);
+
   return data.map(row => ({
     id: row.id,
     chatId: row.chat_id,
     senderId: row.sender_id,
     text: row.text,
+    photoUrl: row.photo_url,
     createdAt: row.created_at,
   }));
 }
 
 export async function getUserChats(userId: string) {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  
+  // 1. Récupérer les participations
+  const { data: participations, error: partError } = await supabase
+    .from("chat_participants")
+    .select("chat_id, last_read_at")
+    .eq("user_id", userId);
+
+  if (partError || !participations) return [];
+
+  const chatIds = participations.map(p => p.chat_id);
+  if (chatIds.length === 0) return [];
+
+  // 2. Récupérer les détails des chats et les messages récents
+  const { data: chats, error: chatsError } = await supabase
     .from("chats")
-    .select("*, chat_participants!inner(user_id)")
-    .eq("chat_participants.user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(20);
+    .select(`
+      id,
+      type,
+      event_id,
+      created_at,
+      updated_at,
+      event:event_id (title),
+      messages (text, created_at, sender_id)
+    `)
+    .in("id", chatIds)
+    .order("updated_at", { ascending: false });
 
-  if (error || !data) return [];
+  if (chatsError || !chats) return [];
 
-  // Need to fetch other participants to map to the `participantIds` array
-  const chatIds = data.map(c => c.id);
+  // 3. Récupérer les participants
   const { data: allParticipants } = await supabase
     .from("chat_participants")
-    .select("chat_id, user_id")
+    .select(`
+      chat_id,
+      user:user_id (id, name, pseudo, photo_url)
+    `)
     .in("chat_id", chatIds);
 
-  return data.map(chat => {
-    const participants = allParticipants?.filter(p => p.chat_id === chat.id).map(p => p.user_id) || [];
+  // 4. Mapper
+  return chats.map(chat => {
+    const participants = allParticipants
+      ?.filter(cp => cp.chat_id === chat.id)
+      .map(cp => cp.user)
+      .filter(Boolean) || [];
+    
+    const p = participations.find(p => p.chat_id === chat.id);
+    const lastReadAt = p?.last_read_at || new Date(0).toISOString();
+
+    // Calculer les non-lus localement
+    const unreadCount = (chat.messages || []).filter(
+      (m: any) => m.sender_id !== userId && new Date(m.created_at) > new Date(lastReadAt)
+    ).length;
+
+    let title = (chat as any).event?.title || "Discussion";
+    if (chat.type === "private") {
+      const other = participants.find((p: any) => p.id !== userId);
+      if (other) title = (other as any).name;
+    }
+
+    const sortedMessages = (chat.messages || []).sort(
+      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    const lastMessage = sortedMessages[0] || null;
+
     return {
       id: chat.id,
       eventId: chat.event_id,
       type: chat.type,
-      participantIds: participants,
+      title,
+      participants,
+      unreadCount,
+      lastMessage: lastMessage ? {
+        text: lastMessage.text,
+        createdAt: lastMessage.created_at
+      } : null,
       createdAt: chat.created_at,
       updatedAt: chat.updated_at,
     };
   });
 }
 
-export async function sendMessage(chatId: string, senderId: string, rawText: unknown) {
-  const text = parseString(rawText, "Message", 1200);
+export async function sendMessage(chatId: string, senderId: string, rawText: unknown, photoUrl?: string) {
+  const text = photoUrl ? String(rawText || "") : parseString(rawText, "Message", 1200);
   const chat = await assertChatMember(chatId, senderId);
   const supabase = createAdminClient();
   
@@ -64,13 +120,15 @@ export async function sendMessage(chatId: string, senderId: string, rawText: unk
       chat_id: chatId,
       sender_id: senderId,
       text,
+      photo_url: photoUrl || null
     })
     .select()
     .single();
 
   if (error) throw error;
 
-  // updatedAt is handled by the Postgres trigger `on_message_inserted`
+  // On marque comme lu pour l'expéditeur
+  await markChatAsRead(chatId, senderId);
 
   const recipients = chat.participantIds.filter((uid) => uid !== senderId);
   await Promise.all(
@@ -88,8 +146,18 @@ export async function sendMessage(chatId: string, senderId: string, rawText: unk
     chatId: message.chat_id,
     senderId: message.sender_id,
     text: message.text,
+    photoUrl: message.photo_url,
     createdAt: message.created_at,
   };
+}
+
+export async function markChatAsRead(chatId: string, userId: string) {
+  const supabase = createAdminClient();
+  await supabase
+    .from("chat_participants")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("chat_id", chatId)
+    .eq("user_id", userId);
 }
 
 async function assertChatMember(chatId: string, userId: string) {

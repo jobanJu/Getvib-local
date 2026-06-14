@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Check, X, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/features/auth/auth-provider";
+import { createClient } from "@/lib/supabase/client";
 
 type Request = {
   id: string;
@@ -15,9 +16,40 @@ type Request = {
 };
 
 export function FriendRequestManager({ initialRequests }: { initialRequests: Request[] }) {
-  const { getIdToken } = useAuth();
+  const { user, getIdToken } = useAuth();
   const [requests, setRequests] = useState<Request[]>(initialRequests);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`friend_requests_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // INSERT, UPDATE (status), DELETE
+          schema: "public",
+          table: "friendships",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          // On recharge les demandes pour avoir les infos de profil complètes (nom, photo)
+          const token = await getIdToken();
+          const res = await fetch("/api/friends/requests", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          setRequests(data.requests || []);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, supabase, getIdToken]);
 
   async function handleDecide(requestId: string, status: "accepted" | "rejected") {
     setProcessingId(requestId);

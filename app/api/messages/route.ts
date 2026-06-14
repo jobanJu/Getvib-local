@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const message = await sendMessage(String(body.chatId), user.id, body.text);
+    const message = await sendMessage(String(body.chatId), user.id, body.text, body.photoUrl);
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unexpected error" }, { status: 400 });

@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Compass, MessageCircle, Plus, Settings, Shield, UserRound } from "lucide-react";
+import { Bell, Compass, LifeBuoy, MessageCircle, Plus, Settings, Shield, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const primaryNav = [
   { href: "/discover" as const, label: "Découvrir", icon: Compass },
   { href: "/create" as const, label: "Créer", icon: Plus },
+  { href: "/amis" as const, label: "Amis", icon: Users },
   { href: "/messages" as const, label: "Messages", icon: MessageCircle },
   { href: "/profile" as const, label: "Profil", icon: UserRound },
 ] as const;
@@ -30,7 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen pb-24 md:pb-0">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/82 backdrop-blur-2xl">
+      <header className="safe-top sticky top-0 z-40 border-b border-border bg-background/82 backdrop-blur-2xl">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3 font-bold">
             <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-black shadow-[0_0_30px_rgba(246,51,154,0.5)] ring-1 ring-accent/40">
@@ -60,6 +61,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <Link className="hidden rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground md:block" href="/safety">
               <Shield className="h-5 w-5" />
+            </Link>
+            <Link className="rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground md:hidden" href="/amis" aria-label="Amis">
+              <Users className="h-5 w-5" />
+            </Link>
+            <Link className="rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground" href="/aide" aria-label="Centre d'aide">
+              <LifeBuoy className="h-5 w-5" />
             </Link>
             <Link className="rounded-xl p-2 text-muted transition hover:bg-foreground/8 hover:text-foreground" href="/settings">
               <Settings className="h-5 w-5" />

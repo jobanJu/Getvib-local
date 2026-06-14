@@ -21,3 +21,15 @@ export const CITIES_BY_REGION = {
 };
 
 export const AVAILABLE_CITIES = Object.values(CITIES_BY_REGION).flat().sort();
+
+// Grandes catégories de vibe — base de la catégorisation et du filtrage Découvrir.
+export const VIBES = [
+  "Musique",
+  "Gastronomie",
+  "Art & Culture",
+  "Jeux",
+  "Sport",
+  "Chill",
+  "Fête",
+  "Plein air",
+] as const;

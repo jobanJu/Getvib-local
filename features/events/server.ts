@@ -98,7 +98,7 @@ export async function createEvent(hostId: string, input: CreateEventInput) {
     min_age: input.minAge,
     max_age: input.maxAge,
     interests_required: input.interestsRequired,
-    status: "published",
+    status: input.status || "published",
   };
 
   const { data, error } = await supabase.from("events").insert(payload).select().single();
@@ -137,7 +137,13 @@ export async function applyToEvent(eventId: string, userId: string, rawMessage: 
 
   if (error) throw error;
 
-  await createNotification(event.host_id, "application_received", "Nouvelle candidature");
+  const { data: userProfile } = await supabase.from("profiles").select("name").eq("id", userId).single();
+  await createNotification(
+    event.host_id, 
+    "application_received", 
+    `${userProfile?.name || "Quelqu'un"} souhaite rejoindre ta vibe.`,
+    `/event/${eventId}/manage`
+  );
   await ensurePrivateChat(eventId, event.host_id, userId);
 
   return {
@@ -177,14 +183,20 @@ export async function decideApplication(eventId: string, userId: string, status:
   // Update application status
   await supabase.from("applications").update({ status }).eq("id", application.id);
 
+  const { data: eventData } = await supabase.from("events").select("title").eq("id", eventId).single();
+
   if (status === "accepted") {
     await supabase.from("event_participants").insert({ event_id: eventId, user_id: userId });
+    await ensureGroupChat(eventId, userId);
   }
 
   await createNotification(
     userId,
     status === "accepted" ? "application_accepted" : "application_rejected",
-    status === "accepted" ? "Candidature acceptée" : "Candidature refusée",
+    status === "accepted" 
+        ? `Ton hôte a accepté ta demande pour "${eventData?.title}".` 
+        : `Ta candidature pour "${eventData?.title}" n'a pas été retenue.`,
+    `/event/${eventId}`
   );
 
   return { ok: true };
@@ -257,8 +269,8 @@ export async function listFriends(userId: string) {
     .select(`
       sender_id,
       receiver_id,
-      sender:sender_id (id, name, photo_url, city),
-      receiver:receiver_id (id, name, photo_url, city)
+      sender:sender_id (id, name, pseudo, photo_url, city),
+      receiver:receiver_id (id, name, pseudo, photo_url, city)
     `)
     .eq("status", "accepted")
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
@@ -302,8 +314,17 @@ export async function decideFriendRequest(requestId: string, status: "accepted" 
     const { error } = await supabase.from("friendships").delete().eq("id", requestId);
     if (error) throw error;
   } else {
-    const { error } = await supabase.from("friendships").update({ status: "accepted" }).eq("id", requestId);
+    const { data: link, error } = await supabase.from("friendships").update({ status: "accepted" }).eq("id", requestId).select("sender_id, receiver_id").single();
     if (error) throw error;
+
+    // Notification pour l'expéditeur initial
+    const { data: receiver } = await supabase.from("profiles").select("name, pseudo").eq("id", link.receiver_id).single();
+    await supabase.from("notifications").insert({
+      user_id: link.sender_id,
+      type: "application_accepted",
+      title: `${receiver?.name || "Ton ami"} a accepté ta demande.`,
+      link: `/u/${receiver?.pseudo}`
+    });
   }
 
   return { ok: true };
@@ -500,12 +521,361 @@ async function ensurePrivateChat(eventId: string, hostId: string, userId: string
   ]);
 }
 
-async function createNotification(userId: string, type: string, title: string) {
+async function createNotification(userId: string, type: string, title: string, link?: string) {
   const supabase = createAdminClient();
-  await supabase.from("notifications").insert({ user_id: userId, type, title });
+  await supabase.from("notifications").insert({ user_id: userId, type, title, link });
 }
 
 function defaultImageFor(vibe: string) {
   const query = encodeURIComponent(`${vibe} private dinner people evening`);
   return `https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&q=70&getvib=${query}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recherche d'amis par pseudo (@handle) + envoi de demande d'ami.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Le pseudo est-il libre ? (insensible à la casse) Optionnellement on ignore
+ *  le profil `exceptUserId` (utile quand on modifie son propre pseudo). */
+export async function isPseudoAvailable(pseudo: string, exceptUserId?: string) {
+  const supabase = createAdminClient();
+  let query = supabase.from("profiles").select("id").ilike("pseudo", pseudo).limit(1);
+  if (exceptUserId) query = query.neq("id", exceptUserId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data?.length ?? 0) === 0;
+}
+
+export type UserSearchResult = {
+  id: string;
+  name: string | null;
+  pseudo: string | null;
+  photo_url: string | null;
+  city: string | null;
+  /** Relation avec l'utilisateur courant */
+  status: "none" | "friends" | "sent" | "received";
+};
+
+/** Recherche d'utilisateurs par pseudo OU nom, en excluant soi-même. Renvoie le
+ *  statut d'amitié pour piloter le bouton (Ajouter / En attente / Amis). */
+export async function searchUsers(currentUserId: string, rawQuery: string): Promise<UserSearchResult[]> {
+  const q = rawQuery.trim().replace(/^@+/, "");
+  if (q.length < 2) return [];
+
+  const supabase = createAdminClient();
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select("id, name, pseudo, photo_url, city")
+    .or(`pseudo.ilike.%${q}%,name.ilike.%${q}%`)
+    .neq("id", currentUserId)
+    .limit(15);
+  if (error) throw error;
+  if (!profiles?.length) return [];
+
+  const ids = profiles.map((p) => p.id);
+  const { data: links } = await supabase
+    .from("friendships")
+    .select("sender_id, receiver_id, status")
+    .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+    .in("sender_id", [currentUserId, ...ids])
+    .in("receiver_id", [currentUserId, ...ids]);
+
+  function statusFor(otherId: string): UserSearchResult["status"] {
+    const link = links?.find(
+      (l) =>
+        (l.sender_id === currentUserId && l.receiver_id === otherId) ||
+        (l.sender_id === otherId && l.receiver_id === currentUserId),
+    );
+    if (!link) return "none";
+    if (link.status === "accepted") return "friends";
+    return link.sender_id === currentUserId ? "sent" : "received";
+  }
+
+  return profiles.map((p) => ({ ...p, status: statusFor(p.id) }));
+}
+
+/** Envoie une demande d'ami (statut pending). Idempotent / défensif : refuse
+ *  l'auto-ajout et les doublons (dans un sens comme dans l'autre). */
+export async function sendFriendRequest(senderId: string, receiverId: string) {
+  if (senderId === receiverId) throw new Error("Tu ne peux pas t'ajouter toi-même.");
+
+  const supabase = createAdminClient();
+
+  const { data: existing } = await supabase
+    .from("friendships")
+    .select("id, status")
+    .or(
+      `and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`,
+    )
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.status === "accepted") throw new Error("Vous êtes déjà amis.");
+    throw new Error("Une demande est déjà en attente.");
+  }
+
+  const { error } = await supabase
+    .from("friendships")
+    .insert({ sender_id: senderId, receiver_id: receiverId, status: "pending" });
+  if (error) throw error;
+
+  // Notification pour le destinataire
+  const { data: sender } = await supabase.from("profiles").select("name").eq("id", senderId).single();
+  await supabase.from("notifications").insert({
+    user_id: receiverId,
+    type: "friend_request",
+    title: `${sender?.name || "Quelqu'un"} t'a envoyé une demande d'ami.`,
+    link: "/amis"
+  });
+
+  return { ok: true };
+}
+
+export type FriendVibe = {
+  eventId: string;
+  title: string;
+  image: string;
+  vibe: string;
+  type: string;
+  city: string;
+  date: string;
+  /** Amis qui participent (ou organisent) cette vibe */
+  friendsGoing: { id: string; name: string | null; photo_url: string | null; isHost: boolean }[];
+};
+
+/** Vibes à venir où au moins un ami est hôte ou participant. Cœur de la page
+ *  /amis : « où sortent mes amis ». */
+export async function listFriendsVibes(userId: string): Promise<FriendVibe[]> {
+  const supabase = createAdminClient();
+
+  // 1. Mes amis (acceptés) + leurs infos d'affichage.
+  const { data: links } = await supabase
+    .from("friendships")
+    .select("sender_id, receiver_id, sender:sender_id (id, name, photo_url), receiver:receiver_id (id, name, photo_url)")
+    .eq("status", "accepted")
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+
+  const friends = new Map<string, { id: string; name: string | null; photo_url: string | null }>();
+  for (const l of links || []) {
+    const f: any = (l as any).sender_id === userId ? (l as any).receiver : (l as any).sender;
+    if (f?.id) friends.set(f.id, { id: f.id, name: f.name, photo_url: f.photo_url });
+  }
+  if (friends.size === 0) return [];
+
+  // 2. Vibes publiées à venir avec leurs participants.
+  const now = new Date().toISOString();
+  const { data: events } = await supabase
+    .from("events")
+    .select("id, title, image, vibe, type, city, date, host_id, event_participants(user_id)")
+    .eq("status", "published")
+    .gte("date", now)
+    .order("date", { ascending: true })
+    .limit(80);
+
+  const out: FriendVibe[] = [];
+  for (const e of events || []) {
+    const goingIds = new Set<string>([
+      ...(friends.has((e as any).host_id) ? [(e as any).host_id] : []),
+      ...((e as any).event_participants || [])
+        .map((p: any) => p.user_id)
+        .filter((id: string) => friends.has(id)),
+    ]);
+    if (goingIds.size === 0) continue;
+
+    out.push({
+      eventId: (e as any).id,
+      title: (e as any).title,
+      image: (e as any).image,
+      vibe: (e as any).vibe,
+      type: (e as any).type,
+      city: (e as any).city,
+      date: (e as any).date,
+      friendsGoing: [...goingIds].map((id) => ({
+        ...friends.get(id)!,
+        isHost: id === (e as any).host_id,
+      })),
+    });
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Avis de soirées passées (ressentis).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type EventReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  author: { id: string; name: string | null; pseudo: string | null; photo_url: string | null };
+};
+
+/** L'utilisateur a-t-il le droit de laisser un avis ? (vibe passée + il y était
+ *  hôte ou participant + pas déjà d'avis). Renvoie { can, reason }. */
+export async function canReviewEvent(userId: string, eventId: string) {
+  const supabase = createAdminClient();
+  const { data: event } = await supabase
+    .from("events")
+    .select("id, host_id, date, event_participants(user_id)")
+    .eq("id", eventId)
+    .single();
+  if (!event) return { can: false, reason: "introuvable" as const };
+
+  const isPast = new Date((event as any).date).getTime() < Date.now();
+  if (!isPast) return { can: false, reason: "pas_encore" as const };
+
+  const attended =
+    (event as any).host_id === userId ||
+    ((event as any).event_participants || []).some((p: any) => p.user_id === userId);
+  if (!attended) return { can: false, reason: "non_participant" as const };
+
+  const { data: existing } = await supabase
+    .from("event_reviews")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("author_id", userId)
+    .maybeSingle();
+  if (existing) return { can: false, reason: "deja_donne" as const };
+
+  return { can: true, reason: "ok" as const };
+}
+
+export async function createReview(userId: string, eventId: string, rating: number, comment: string) {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new Error("Note invalide (1 à 5).");
+  const trimmed = (comment || "").trim().slice(0, 1000);
+
+  const { can, reason } = await canReviewEvent(userId, eventId);
+  if (!can) {
+    const messages: Record<string, string> = {
+      introuvable: "Vibe introuvable.",
+      pas_encore: "Tu pourras laisser un avis une fois la vibe passée.",
+      non_participant: "Seuls les participants peuvent laisser un avis.",
+      deja_donne: "Tu as déjà laissé un avis pour cette vibe.",
+    };
+    throw new Error(messages[reason] || "Avis impossible.");
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("event_reviews")
+    .insert({ event_id: eventId, author_id: userId, rating, comment: trimmed || null });
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function listEventReviews(eventId: string): Promise<EventReview[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("event_reviews")
+    .select("id, rating, comment, created_at, author:author_id (id, name, pseudo, photo_url)")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((r: any) => ({
+    id: r.id,
+    rating: r.rating,
+    comment: r.comment,
+    createdAt: r.created_at,
+    author: r.author,
+  }));
+}
+
+export function reviewStats(reviews: { rating: number }[]) {
+  if (reviews.length === 0) return { count: 0, average: 0 };
+  const sum = reviews.reduce((s, r) => s + r.rating, 0);
+  return { count: reviews.length, average: Math.round((sum / reviews.length) * 10) / 10 };
+}
+
+/** Derniers avis laissés par mes amis (pour la page /amis). */
+export async function listRecentFriendsReviews(userId: string, limit = 8) {
+  const supabase = createAdminClient();
+  const { data: links } = await supabase
+    .from("friendships")
+    .select("sender_id, receiver_id")
+    .eq("status", "accepted")
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+  const friendIds = (links || []).map((l: any) => (l.sender_id === userId ? l.receiver_id : l.sender_id));
+  if (friendIds.length === 0) return [];
+
+  const { data } = await supabase
+    .from("event_reviews")
+    .select("id, rating, comment, created_at, author:author_id (id, name, pseudo, photo_url), event:event_id (id, title)")
+    .in("author_id", friendIds)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    rating: r.rating,
+    comment: r.comment,
+    createdAt: r.created_at,
+    author: r.author,
+    event: r.event,
+  }));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profil public (accessible via /u/@pseudo).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Profil public d'un membre + stats pour les badges + relation avec le viewer. */
+export async function getPublicProfile(pseudo: string, viewerId?: string) {
+  const supabase = createAdminClient();
+  const clean = pseudo.trim().replace(/^@+/, "");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, name, pseudo, photo_url, bio, city, interests, verification_level, created_at")
+    .ilike("pseudo", clean)
+    .maybeSingle();
+  if (!profile) return null;
+
+  const [hosted, friends, attending, past] = await Promise.all([
+    listEventsByHost(profile.id),
+    listFriends(profile.id),
+    listEventsAttending(profile.id),
+    listPastEventsAttending(profile.id),
+  ]);
+
+  // Amis communs
+  let commonFriends: any[] = [];
+  if (viewerId && viewerId !== profile.id) {
+    const viewerFriends = await listFriends(viewerId);
+    commonFriends = friends.filter(f1 => viewerFriends.some(f2 => f1.id === f2.id));
+  }
+
+  const stats = {
+    verificationLevel: profile.verification_level ?? 0,
+    eventsHosted: hosted.length,
+    vibPlusHosted: hosted.filter((e) => e.type === "vibplus").length,
+    totalGuests: hosted.reduce((sum, e) => sum + e.participants.length, 0),
+    eventsAttended: attending.length + past.length,
+    friends: friends.length,
+  };
+
+  // Relation d'amitié avec le visiteur (pour le bouton Ajouter / Amis).
+  let status: "none" | "friends" | "sent" | "received" | "self" = "none";
+  if (viewerId && viewerId === profile.id) {
+    status = "self";
+  } else if (viewerId) {
+    const { data: link } = await supabase
+      .from("friendships")
+      .select("sender_id, status")
+      .or(
+        `and(sender_id.eq.${viewerId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${viewerId})`,
+      )
+      .maybeSingle();
+    if (link) status = link.status === "accepted" ? "friends" : link.sender_id === viewerId ? "sent" : "received";
+  }
+
+  return { 
+    profile, 
+    stats, 
+    friendsCount: friends.length, 
+    hostedCount: hosted.length, 
+    status,
+    commonFriends,
+    hostedEvents: hosted.slice(0, 3) // On renvoie les 3 derniers organisés
+  };
 }

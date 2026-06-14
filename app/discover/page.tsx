@@ -18,6 +18,7 @@ export default async function DiscoverPage() {
     type: event.type,
     city: event.city,
     dateLabel: formatEventDate(event.date),
+    rawDate: event.date,
     participants: event.participants.length,
     maxParticipants: event.maxParticipants,
     contributionAmount: event.contributionAmount,

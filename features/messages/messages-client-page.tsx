@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { ChatInterface } from "./chat-interface";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { PageLoader } from "@/components/ui/page-loader";
 
 export function MessagesClientPage() {
   const { user, loading, getIdToken } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialChatId = searchParams.get("chat") || undefined;
   const [chats, setChats] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
@@ -54,12 +57,8 @@ export function MessagesClientPage() {
   }
 
   if (loading || chatsLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-      </div>
-    );
+    return <PageLoader label="Chargement des messages…" />;
   }
 
-  return <ChatInterface initialChats={chats} initialUserId={user?.id || ""} friends={friends} />;
+  return <ChatInterface initialChats={chats} initialUserId={user?.id || ""} friends={friends} initialChatId={initialChatId} />;
 }

@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/auth-provider";
 import { ShieldCheck } from "lucide-react";
+
+// Pages publiques : la charte ne doit JAMAIS les recouvrir (sinon l'accueil reste
+// bloqué). L'acceptation est exigée uniquement dans l'app connectée.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/safety", "/aide", "/onboarding"];
 
 const commandements = [
   { id: 1, title: "Mineurs interdits", text: "GetVib est strictement réservé aux personnes majeures (+18 ans)." },
@@ -28,11 +33,14 @@ const commandements = [
 
 export function TermsBlocker() {
   const { user, profile, refreshProfile } = useAuth();
+  const pathname = usePathname() || "/";
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [refused, setRefused] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Jamais sur les pages publiques (accueil compris), ni si pas connecté / déjà accepté.
+  if (PUBLIC_PATHS.includes(pathname)) return null;
   if (!user || profile?.accepted_terms || accepted) return null;
 
   async function handleAccept() {

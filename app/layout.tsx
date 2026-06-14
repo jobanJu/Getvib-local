@@ -3,10 +3,13 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
-import { SupportChat } from "@/components/layout/support-chat";
 import { TermsBlocker } from "@/components/layout/terms-blocker";
+import { AccessConsentBanner } from "@/features/moderation/access-consent-banner";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { ThemeProvider } from "@/features/auth/theme-provider";
+import { ToastProvider } from "@/components/ui/toast";
+import { RealtimeNotifications } from "@/features/notifications/realtime-notifications";
+import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -67,10 +70,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="font-sans antialiased">
         <ThemeProvider>
           <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <SupportChat />
-            <TermsBlocker />
-            <ServiceWorkerRegister />
+            <ToastProvider>
+              <RealtimeNotifications />
+              <PwaInstallPrompt />
+              <AppShell>{children}</AppShell>
+              <TermsBlocker />
+              <AccessConsentBanner />
+              <ServiceWorkerRegister />
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

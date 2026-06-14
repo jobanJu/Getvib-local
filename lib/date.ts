@@ -24,3 +24,24 @@ export function formatEventDate(date: { toDate: () => Date } | Date | string | n
     minute: "2-digit",
   }).replace(" à ", " · ");
 }
+
+export function isToday(date: Date) {
+  const now = new Date();
+  return date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+}
+
+export function isTomorrow(date: Date) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return date.getDate() === tomorrow.getDate() &&
+    date.getMonth() === tomorrow.getMonth() &&
+    date.getFullYear() === tomorrow.getFullYear();
+}
+
+export function isThisWeekend(date: Date) {
+  const day = date.getDay();
+  // 5 = Vendredi soir (pourquoi pas), 6 = Samedi, 0 = Dimanche
+  return day === 0 || day === 6 || day === 5;
+}

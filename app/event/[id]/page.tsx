@@ -5,9 +5,13 @@ import { CalendarDays, LockKeyhole, MapPin, ShieldCheck, Users } from "lucide-re
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getEventForViewer } from "@/features/events/server";
+import { VibBadge } from "@/components/events/vib-badge";
+import { cn } from "@/lib/utils";
+import { getEventForViewer, listEventReviews, reviewStats, canReviewEvent } from "@/features/events/server";
 import { formatEventDate } from "@/lib/date";
 import { ApplicationForm } from "@/features/events/application-form";
+import { EventReviews } from "@/features/events/event-reviews";
+import { Countdown } from "@/components/ui/countdown";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,18 +25,34 @@ export default async function EventDetailPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   
   const event = await getEventForViewer(id, user?.id);
-  
+
   if (!event) notFound();
+
+  const isParticipant = Boolean(user && event.participants.includes(user.id));
+  const showCountdown = isParticipant && !event.addressVisible && new Date(event.revealAt).getTime() > Date.now();
+
+  // Avis : visibles par tous ; le formulaire n'apparaît que si l'utilisateur a
+  // participé à cette vibe (passée) et n'a pas encore donné son ressenti.
+  const reviews = await listEventReviews(id);
+  const { average } = reviewStats(reviews);
+  const canReview = user ? (await canReviewEvent(user.id, id)).can : false;
 
   return (
     <section className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.7fr] lg:px-8">
       <div className="grid gap-5">
-        <div className="relative aspect-[16/10] overflow-hidden rounded-3xl border border-border">
+        <div
+          className={cn(
+            "relative aspect-[16/10] overflow-hidden rounded-3xl border",
+            event.type === "vibplus"
+              ? "border-accent/50 ring-1 ring-accent/40 shadow-[0_0_40px_rgba(246,51,154,0.22)]"
+              : "border-border",
+          )}
+        >
           <Image src={event.image} alt="" fill unoptimized className="object-cover" sizes="(max-width: 1024px) 100vw, 680px" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
           <div className="absolute bottom-5 left-5 right-5">
             <div className="mb-3 flex gap-2">
-              <Badge tone={event.type === "vibplus" ? "purple" : "green"}>{event.type === "vibplus" ? "Vib+" : "Vib"}</Badge>
+              <VibBadge type={event.type} />
               <Badge>{event.vibe}</Badge>
             </div>
             <h1 className="text-4xl font-black leading-tight">{event.title}</h1>
@@ -57,10 +77,13 @@ export default async function EventDetailPage({ params }: Props) {
                 {event.address}
               </span>
             ) : (
-              <span className="flex items-center gap-3">
-                <LockKeyhole className="h-5 w-5 text-accent-secondary" />
-                {event.addressHint}
-              </span>
+              <div className="grid gap-3">
+                <span className="flex items-center gap-3">
+                  <LockKeyhole className="h-5 w-5 text-accent-secondary" />
+                  {event.addressHint}
+                </span>
+                {showCountdown && <Countdown targetDate={event.revealAt} />}
+              </div>
             )}
             <span className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-accent-secondary" />
@@ -68,6 +91,8 @@ export default async function EventDetailPage({ params }: Props) {
             </span>
           </div>
         </Card>
+
+        <EventReviews eventId={id} reviews={reviews} canReview={canReview} average={average} />
       </div>
 
       <aside className="grid gap-4 self-start lg:sticky lg:top-24">
@@ -93,11 +118,11 @@ export default async function EventDetailPage({ params }: Props) {
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-xl font-semibold mb-4">Rejoindre la soirée</h2>
+          <h2 className="text-xl font-semibold mb-4">Rejoindre la vibe</h2>
           {user?.id === event.hostId ? (
             <div className="grid gap-2">
                 <Button className="w-full bg-accent text-foreground font-bold py-6" asChild>
-                    <Link href={`/event/${id}/manage`}>Gérer cette soirée</Link>
+                    <Link href={`/event/${id}/manage`}>Gérer cette vibe</Link>
                 </Button>
                 <p className="text-[10px] text-center text-muted uppercase font-bold tracking-widest">
                     Vous êtes l&#39;hôte de cette vibe

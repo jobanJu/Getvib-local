@@ -4,6 +4,8 @@ import { CalendarDays, LockKeyhole, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { VibBadge } from "@/components/events/vib-badge";
+import { cn } from "@/lib/utils";
 
 export type EventCardData = {
   id: string;
@@ -14,19 +16,27 @@ export type EventCardData = {
   type: "vib" | "vibplus";
   city: string;
   dateLabel: string;
+  rawDate: string;
   participants: number;
   maxParticipants: number;
   contributionAmount: number;
 };
 
 export function EventCard({ event }: { event: EventCardData }) {
+  const isPlus = event.type === "vibplus";
   return (
-    <Card className="overflow-hidden">
-      <div className="relative aspect-[16/11]">
-        <Image src={event.image} alt="" fill unoptimized className="object-cover" sizes="(max-width: 768px) 100vw, 420px" />
+    <Card
+      className={cn(
+        "group overflow-hidden transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_rgba(0,0,0,0.18)]",
+        // GetVib+++ : liseré premium pour le distinguer au premier coup d'œil.
+        isPlus && "border-accent/40 ring-1 ring-accent/30 shadow-[0_0_30px_rgba(246,51,154,0.18)]",
+      )}
+    >
+      <div className="relative aspect-[16/11] overflow-hidden">
+        <Image src={event.image} alt="" fill unoptimized className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 420px" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/10 to-transparent" />
         <div className="absolute left-4 top-4 flex gap-2">
-          <Badge tone={event.type === "vibplus" ? "purple" : "green"}>{event.type === "vibplus" ? "Vib+" : "Vib"}</Badge>
+          <VibBadge type={event.type} />
           <Badge>{event.vibe}</Badge>
         </div>
       </div>

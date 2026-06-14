@@ -86,6 +86,36 @@
     background: rgba(246, 51, 154, 0.4);
     color: #fff;
   }
+
+  /* Transition de page globale */
+  main {
+    animation: fade-in 0.4s ease-out;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes zoom-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 @layer components {
@@ -103,5 +133,58 @@
 
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Décale le header sous l'encoche / la barre d'état iPhone (mode plein écran
+     PWA) pour que le bouton paramètres reste accessible. */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Skeleton avec reflet animé (plus vivant qu'un simple pulse) */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: rgb(var(--foreground) / 0.08);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--foreground) / 0.06),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+}
+
+@layer utilities {
+  /* Décale l'entrée de chaque enfant pour un effet de cascade */
+  .stagger > * {
+    animation: fade-in-up 0.5s ease-out both;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0.04s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.08s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.12s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.16s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.20s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.24s; }
+  .stagger > *:nth-child(n + 7) { animation-delay: 0.28s; }
+}
+
+/* Accessibilité : on coupe tout mouvement si l'utilisateur le demande */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

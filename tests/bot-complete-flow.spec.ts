@@ -7,19 +7,24 @@ const TEST_USER = {
   lastName: `Testeur${randomId}`,
   city: 'Lille',
   email: `bot${randomId}@getvib.fr`,
-  password: 'Password123!'
+  password: 'Password123!',
+  pseudo: `bot_${randomId}`,
+  age: '25'
 };
 
 test.describe('Scénario Autonome Robuste', () => {
 
   test('Inscription, Charte et Création', async ({ page }) => {
+    page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
     
     // 1. Inscription
     console.log('--- Étape 1 : Inscription ---');
-    await page.goto('http://localhost:3000/signup');
+    await page.goto('/signup');
     
     await page.fill('input[name="firstName"]', TEST_USER.firstName);
     await page.fill('input[name="lastName"]', TEST_USER.lastName);
+    await page.fill('input[name="pseudo"]', TEST_USER.pseudo);
+    await page.fill('input[name="age"]', TEST_USER.age);
     await page.fill('input[name="city"]', TEST_USER.city);
     await page.fill('input[name="email"]', TEST_USER.email);
     await page.fill('input[name="password"]', TEST_USER.password);
@@ -30,6 +35,17 @@ test.describe('Scénario Autonome Robuste', () => {
     await fileChooser.setFiles(path.join(process.cwd(), 'test-photo.jpg'));
     
     await page.click('button[type="submit"]');
+
+    // Attente écran de succès ou redirection
+    console.log('Attente de l\'écran de succès...');
+    const welcomeBtn = page.locator('button:has-text("Entrer dans GetVib")');
+    try {
+        await welcomeBtn.waitFor({ state: 'visible', timeout: 10000 });
+        await welcomeBtn.click();
+        console.log('✅ Bouton bienvenue cliqué');
+    } catch (e) {
+        console.log('ℹ️ Écran de succès non vu, peut-être redirection directe...');
+    }
 
     // Attente redirection
     await expect(page).toHaveURL(/.*discover/, { timeout: 20000 });
@@ -50,7 +66,7 @@ test.describe('Scénario Autonome Robuste', () => {
 
     // 3. Création de soirée
     console.log('--- Étape 3 : Création de soirée ---');
-    await page.goto('http://localhost:3000/create');
+    await page.goto('/create');
     
     // Si la charte apparaît ici (car on change de page)
     try {

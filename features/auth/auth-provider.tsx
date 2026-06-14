@@ -27,21 +27,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(data);
   }
 
+  // Pose/rafraîchit les cookies d'auth côté serveur depuis la session client.
+  // Répare les sessions « localStorage » qui n'avaient jamais posé de cookies.
+  async function syncServerCookies(session: Session | null) {
+    if (!session) return;
+    try {
+      await fetch("/api/auth/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token, refresh_token: session.refresh_token }),
+      });
+    } catch {
+      // best-effort
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        syncServerCookies(session);
+      }
       setLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+          syncServerCookies(session);
+        }
       } else {
         setProfile(null);
       }

@@ -106,4 +106,5 @@ export type CreateEventInput = {
   type: EventType;
   contributionAmount: number;
   contributionReason: string;
+  status?: EventStatus;
 };

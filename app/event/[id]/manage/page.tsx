@@ -83,7 +83,7 @@ export default async function EventManagePage({ params }: Props) {
                         Modifier les infos (Bientôt)
                     </Button>
                     <Button variant="secondary" className="w-full justify-start text-muted opacity-50 cursor-not-allowed">
-                        Annuler la soirée
+                        Annuler la vibe
                     </Button>
                 </div>
                 <p className="mt-4 text-[10px] text-muted uppercase font-bold tracking-widest leading-relaxed">
