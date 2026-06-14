@@ -8,26 +8,33 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/discover";
+  // On récupère 'next' ou on vérifie si c'est un flux de récupération
+  let next = searchParams.get("next") || "/discover";
 
   if (code) {
     const supabase = await createClient();
     const { error, data } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      // Profil incomplet (typiquement une 1re connexion Google) → étape de
-      // complétion (pseudo, âge, ville…) avant d'entrer dans l'app.
-      const userId = data.user?.id;
-      if (userId) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("pseudo, age")
-          .eq("id", userId)
-          .single();
-        if (!profile?.pseudo || !profile?.age) return NextResponse.redirect(`${origin}/onboarding`);
+    
+    if (!error && data.user) {
+      // Si l'utilisateur vient d'un mail de reset, on force la redirection
+      // vers le changement de mot de passe si c'est ce qui était prévu.
+      
+      const userId = data.user.id;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pseudo, age")
+        .eq("id", userId)
+        .single();
+
+      // Priorité : Onboarding si profil incomplet
+      if (!profile?.pseudo || !profile?.age) {
+        return NextResponse.redirect(`${origin}/onboarding`);
       }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=oauth`);
+  // Fallback si erreur ou pas de code
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
 }

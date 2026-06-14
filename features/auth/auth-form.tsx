@@ -74,8 +74,9 @@ export function AuthForm({ mode: initialMode }: Props) {
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") || "");
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
+      redirectTo: `${baseUrl}/auth/callback?next=/settings/update-password`,
     });
 
     if (error) {
