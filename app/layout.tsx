@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/features/auth/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { RealtimeNotifications } from "@/features/notifications/realtime-notifications";
 import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
+import { PasswordRecoveryHandler } from "@/features/auth/password-recovery-handler";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <AuthProvider>
             <ToastProvider>
               <RealtimeNotifications />
+              <PasswordRecoveryHandler />
               <PwaInstallPrompt />
               <AppShell>{children}</AppShell>
               <TermsBlocker />

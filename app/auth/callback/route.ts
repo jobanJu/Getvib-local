@@ -39,7 +39,8 @@ export async function GET(request: Request) {
     }
   }
 
-  // Si on arrive ici sans code, c'est peut-être un hash (#). 
-  // On redirige vers login qui a maintenant un handler client pour ça.
-  return NextResponse.redirect(`${origin}/login`);
+  // Si on arrive ici sans code, c'est peut-être un hash (#) qui contient les tokens. 
+  // On redirige vers la racine (ou on reste sur la page) pour laisser 
+  // le PasswordRecoveryHandler client (dans layout.tsx) détecter l'événement.
+  return NextResponse.redirect(`${origin}/discover`);
 }
