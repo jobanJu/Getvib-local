@@ -13,8 +13,9 @@ type Props = {
   mode: "login" | "signup";
 };
 
-export function AuthForm({ mode }: Props) {
+export function AuthForm({ mode: initialMode }: Props) {
   const router = useRouter();
+  const [mode, setMode] = useState<"login" | "signup" | "forgot_password">(initialMode);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
@@ -63,6 +64,26 @@ export function AuthForm({ mode }: Props) {
     if (error) {
       setMessage(`Erreur Google: ${error.message}`);
     }
+  }
+
+  async function handleResetPassword(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+    
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get("email") || "");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
+    });
+
+    if (error) {
+      setMessage(`Erreur : ${error.message}`);
+    } else {
+      setMessage("E-mail de récupération envoyé ! Vérifie ta boîte mail.");
+    }
+    setLoading(false);
   }
 
   async function submit(formData: FormData) {
@@ -186,6 +207,30 @@ export function AuthForm({ mode }: Props) {
     );
   }
 
+  if (mode === "forgot_password") {
+    return (
+      <div className="mt-5 grid gap-5">
+        <h2 className="text-xl font-bold">Réinitialiser mon mot de passe</h2>
+        <p className="text-sm text-muted">Saisis ton e-mail pour recevoir un lien de récupération.</p>
+        <form onSubmit={handleResetPassword} className="grid gap-4">
+          <label className="grid gap-2 text-sm font-semibold">
+            Email
+            <Input name="email" type="email" required placeholder="jean@exemple.fr" />
+          </label>
+          <Button type="submit" loading={loading}>Envoyer le lien</Button>
+          <button 
+            type="button" 
+            onClick={() => setMode("login")}
+            className="text-xs font-bold text-accent hover:underline"
+          >
+            Retour à la connexion
+          </button>
+        </form>
+        <p className="min-h-5 text-sm font-semibold text-muted text-center">{message}</p>
+      </div>
+    );
+  }
+
   return (
     <form action={submit} className="mt-5 grid gap-4">
       {mode === "signup" && (
@@ -264,7 +309,18 @@ export function AuthForm({ mode }: Props) {
         <Input name="email" type="email" required autoComplete="email" placeholder="jean@exemple.fr" />
       </label>
       <label className="grid gap-2 text-sm font-semibold">
-        Mot de passe
+        <div className="flex items-center justify-between">
+            Mot de passe
+            {mode === "login" && (
+                <button 
+                    type="button" 
+                    onClick={() => setMode("forgot_password")}
+                    className="text-[10px] uppercase font-black tracking-widest text-accent hover:underline"
+                >
+                    Oublié ?
+                </button>
+            )}
+        </div>
         <Input name="password" type="password" required minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="••••••••" />
       </label>
       <Button type="submit" loading={loading}>
